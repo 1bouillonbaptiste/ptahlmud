@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "ptahlmud"
+version = "0.0.1"
+description = "Trading strategies crafting tools"
+authors = ["Baptiste Bouillon <1bouillonbaptiste@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.15.0"
+pytest = "^8.3.5"
+pytest-cases = "^3.8.6"
+pytest-cov = "^6.1.1"
+pre-commit = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.coverage.report]
+skip_empty = true
