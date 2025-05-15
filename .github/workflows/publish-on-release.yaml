@@ -1,0 +1,27 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup the environment
+      uses: ./.github/actions/setup-poetry-env
+
+    - name: Build package
+      run: make build
+
+    - name: Publish package
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      run: make publish
