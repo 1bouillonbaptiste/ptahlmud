@@ -1,12 +1,12 @@
-[tool.poetry]
+[project]
 name = "ptahlmud"
 version = "0.0.1"
 description = "Trading strategies crafting tools"
-authors = ["Baptiste Bouillon <1bouillonbaptiste@gmail.com>"]
+authors = [
+    {name="Baptiste Bouillon", email="1bouillonbaptiste@gmail.com"},
+]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
+requires-python = ">=3.10,<4.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"
