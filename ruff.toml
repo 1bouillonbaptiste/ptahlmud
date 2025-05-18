@@ -12,6 +12,9 @@ select = [
     "I", # isort
     "RUF", # specific ruff rules
 ]
+ignore = [
+    "D107", # issing docstring in `__init__`
+]
 
 [lint.per-file-ignores]
 # Tests don't require rigorous docstrings. Ignore the S101 (assert detected) rule.
