@@ -8,6 +8,9 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
 
+[tool.poetry.dependencies]
+pydantic = "^2.11.4"
+
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"
 pytest = "^8.3.5"
