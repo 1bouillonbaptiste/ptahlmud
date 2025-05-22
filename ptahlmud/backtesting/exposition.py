@@ -2,8 +2,6 @@ import datetime
 import enum
 from dataclasses import dataclass
 
-__FEES_PCT = 0.001
-
 
 class Side(str, enum.Enum):
     LONG = "LONG"
@@ -22,7 +20,7 @@ class Position:
         open_price: price of the coin when the position was open
         open_date: the date when the position was open
         initial_investment: the initial amount of currency the trader invested
-        open_fees: cost of opening the position, fees are being taken before calculating position volume
+        fees_pct: cost in percentage of opening the position
         stop_loss: close the position (stop your losses) if price drops too low
         take_profit: close the position (take your profits) if price reaches your target
     """
@@ -33,10 +31,14 @@ class Position:
     open_price: float
     open_date: datetime.datetime
     initial_investment: float
-    open_fees: float
+    fees_pct: float
 
     stop_loss: float
     take_profit: float
+
+    @property
+    def open_fees(self):
+        return _calculate_fees(investment=self.initial_investment, fees_pct=self.fees_pct)
 
     @property
     def is_closed(self):
@@ -53,18 +55,23 @@ class Trade(Position):
     Attributes:
         close_date: the date when a position was closed, could be any time
         close_price: price of the coin when the position was closed
-        close_fees: fees from selling the position
     """
 
     close_date: datetime.datetime
     close_price: float
-    close_fees: float
+
+    @property
+    def receipt(self):
+        return self.volume * self.close_price
+
+    @property
+    def close_fees(self):
+        return _calculate_fees(investment=self.receipt, fees_pct=self.fees_pct)
 
     @property
     def total_profit(self):
         """Overall profit of the trade."""
-        receipt = self.volume * self.close_price
-        return receipt - self.initial_investment - self.close_fees
+        return self.receipt - self.initial_investment - self.close_fees
 
     @property
     def total_fees(self):
@@ -82,32 +89,16 @@ class Trade(Position):
         return True
 
 
-def _calculate_open_fees(investment: float) -> float:
+def _calculate_fees(investment: float, fees_pct: float) -> float:
     """The cost to open a position."""
-    return investment * __FEES_PCT
-
-
-def _calculate_close_fees(receipt: float) -> float:
-    """The cost to close a position."""
-    return receipt * __FEES_PCT
-
-
-def _calculate_total_profit(open_price: float, close_price: float, size: float) -> float:
-    """Calculate the money made during one trade."""
-    initial_investment = open_price * size
-
-    open_fees = _calculate_open_fees(initial_investment)
-    volume = (initial_investment - open_fees) / open_price
-
-    close_fees = _calculate_close_fees(close_price * volume)
-
-    return volume * close_price - volume * open_price - open_fees - close_fees
+    return investment * fees_pct
 
 
 def open_position(
     open_date: datetime.datetime,
     open_price: float,
     money_to_invest: float,
+    fees_pct: float,
     stop_loss: float = 0,
     take_profit: float = float("inf"),
 ) -> Position:
@@ -119,20 +110,21 @@ def open_position(
         open_date: the date and time when the position is to be opened
         open_price: the price at which the position is opened
         money_to_invest: the amount of money to be invested in the position
+        fees_pct: cost in percentage applied by a broker
         stop_loss: the price level at which the position should be automatically closed to limit losses
         take_profit: the price level at which the position should be automatically closed to secure profits
 
     Returns:
         a new instance of position
     """
-    open_fees = _calculate_open_fees(money_to_invest)
+    open_fees = _calculate_fees(money_to_invest, fees_pct=fees_pct)
     volume = (money_to_invest - open_fees) / open_price
     return Position(
         open_date=open_date,
         open_price=open_price,
         volume=volume,
-        open_fees=open_fees,
         initial_investment=money_to_invest,
+        fees_pct=fees_pct,
         stop_loss=stop_loss,
         take_profit=take_profit,
         side=Side.LONG,
@@ -151,17 +143,13 @@ def close_position(position: Position, close_date: datetime.datetime, close_pric
         closed position as a new trade instance
 
     Raises:
-        ValueError: if the position is already closed
+        ValueError: if the position is already a trade, since it is inheriting
     """
     if position.is_closed:
         raise ValueError("Position il already closed.")
-
-    receipt = position.volume * close_price
-    close_fees = _calculate_close_fees(receipt)
 
     return Trade(
         **vars(position),
         close_date=close_date,
         close_price=close_price,
-        close_fees=close_fees,
     )

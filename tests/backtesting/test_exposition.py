@@ -7,7 +7,7 @@ from ptahlmud.backtesting.exposition import Position, close_position, open_posit
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(open_date=datetime.datetime(2024, 8, 20), open_price=100, money_to_invest=50)
+    return open_position(open_date=datetime.datetime(2024, 8, 20), open_price=100, money_to_invest=50, fees_pct=0.001)
 
 
 def test_open_position(fake_position):
