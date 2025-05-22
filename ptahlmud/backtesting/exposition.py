@@ -2,6 +2,8 @@ import datetime
 import enum
 from dataclasses import dataclass
 
+__FEES_PCT = 0.001
+
 
 class Side(str, enum.Enum):
     LONG = "LONG"
@@ -52,3 +54,43 @@ class Trade(Position):
     close_date: datetime.datetime
     close_price: float
     close_fees: float
+
+
+def _calculate_open_fees(investment: float) -> float:
+    """The cost to open a position."""
+    return investment * __FEES_PCT
+
+
+def open_position(
+    open_date: datetime.datetime,
+    open_price: float,
+    money_to_invest: float,
+    stop_loss: float = 0,
+    take_profit: float = float("inf"),
+) -> Position:
+    """Opens a new trading position.
+
+    This function is the preferred way to create a new instance of a trading position.
+
+    Parameters:
+        open_date: the date and time when the position is to be opened
+        open_price: the price at which the position is opened
+        money_to_invest: the amount of money to be invested in the position
+        stop_loss: the price level at which the position should be automatically closed to limit losses
+        take_profit: the price level at which the position should be automatically closed to secure profits
+
+    Returns:
+        a new instance of position
+    """
+    open_fees = _calculate_open_fees(money_to_invest)
+    volume = (money_to_invest - open_fees) / open_price
+    return Position(
+        open_date=open_date,
+        open_price=open_price,
+        volume=volume,
+        open_fees=open_fees,
+        initial_investment=money_to_invest,
+        stop_loss=stop_loss,
+        take_profit=take_profit,
+        side=Side.LONG,
+    )
