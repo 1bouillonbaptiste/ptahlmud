@@ -37,11 +37,11 @@ class Position:
     take_profit: float
 
     @property
-    def open_fees(self):
+    def open_fees(self) -> float:
         return _calculate_fees(investment=self.initial_investment, fees_pct=self.fees_pct)
 
     @property
-    def is_closed(self):
+    def is_closed(self) -> bool:
         """A position is always open."""
         return False
 
@@ -61,30 +61,30 @@ class Trade(Position):
     close_price: float
 
     @property
-    def receipt(self):
+    def receipt(self) -> float:
         return self.volume * self.close_price
 
     @property
-    def close_fees(self):
+    def close_fees(self) -> float:
         return _calculate_fees(investment=self.receipt, fees_pct=self.fees_pct)
 
     @property
-    def total_profit(self):
+    def total_profit(self) -> float:
         """Overall profit of the trade."""
         return self.receipt - self.initial_investment - self.close_fees
 
     @property
-    def total_fees(self):
+    def total_fees(self) -> float:
         """Overall cost of the trade."""
         return self.open_fees + self.close_fees
 
     @property
-    def total_duration(self):
+    def total_duration(self) -> datetime.timedelta:
         """Overall duration of the trade."""
         return self.close_date - self.open_date
 
     @property
-    def is_closed(self):
+    def is_closed(self) -> bool:
         """A trade is always closed."""
         return True
 
