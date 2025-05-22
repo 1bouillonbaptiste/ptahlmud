@@ -12,7 +12,7 @@ from ptahlmud.types.period import Period
 class Fluctuations(BaseModel):
     """Represent financial fluctuations."""
 
-    config = ConfigDict(arbitrary_types_allowed=True)
+    config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
     candles: list[Candle]
     period: Period
