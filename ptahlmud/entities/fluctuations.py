@@ -16,3 +16,8 @@ class Fluctuations(BaseModel):
 
     candles: list[Candle]
     period: Period
+
+    @property
+    def size(self) -> int:
+        """Number of candles in the collection."""
+        return len(self.candles)
