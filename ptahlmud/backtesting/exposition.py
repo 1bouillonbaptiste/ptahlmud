@@ -38,6 +38,11 @@ class Position:
     stop_loss: float
     take_profit: float
 
+    @property
+    def is_closed(self):
+        """A position is always open."""
+        return False
+
 
 @dataclass
 class Trade(Position):
@@ -55,10 +60,48 @@ class Trade(Position):
     close_price: float
     close_fees: float
 
+    @property
+    def total_profit(self):
+        """Overall profit of the trade."""
+        receipt = self.volume * self.close_price
+        return receipt - self.initial_investment - self.close_fees
+
+    @property
+    def total_fees(self):
+        """Overall cost of the trade."""
+        return self.open_fees + self.close_fees
+
+    @property
+    def total_duration(self):
+        """Overall duration of the trade."""
+        return self.close_date - self.open_date
+
+    @property
+    def is_closed(self):
+        """A trade is always closed."""
+        return True
+
 
 def _calculate_open_fees(investment: float) -> float:
     """The cost to open a position."""
     return investment * __FEES_PCT
+
+
+def _calculate_close_fees(receipt: float) -> float:
+    """The cost to close a position."""
+    return receipt * __FEES_PCT
+
+
+def _calculate_total_profit(open_price: float, close_price: float, size: float) -> float:
+    """Calculate the money made during one trade."""
+    initial_investment = open_price * size
+
+    open_fees = _calculate_open_fees(initial_investment)
+    volume = (initial_investment - open_fees) / open_price
+
+    close_fees = _calculate_close_fees(close_price * volume)
+
+    return volume * close_price - volume * open_price - open_fees - close_fees
 
 
 def open_position(
@@ -93,4 +136,32 @@ def open_position(
         stop_loss=stop_loss,
         take_profit=take_profit,
         side=Side.LONG,
+    )
+
+
+def close_position(position: Position, close_date: datetime.datetime, close_price: float) -> Trade:
+    """Close a position to a trade.
+
+    Args:
+        position: the position to be closed
+        close_date: time when the position is closed
+        close_price: price when the position is closed
+
+    Returns:
+        closed position as a new trade instance
+
+    Raises:
+        ValueError: if the position is already closed
+    """
+    if position.is_closed:
+        raise ValueError("Position il already closed.")
+
+    receipt = position.volume * close_price
+    close_fees = _calculate_close_fees(receipt)
+
+    return Trade(
+        **vars(position),
+        close_date=close_date,
+        close_price=close_price,
+        close_fees=close_fees,
     )
