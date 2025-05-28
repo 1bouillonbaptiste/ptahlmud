@@ -1,11 +1,22 @@
+import random
 from dataclasses import replace
 from datetime import datetime
 
+import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as some
+from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.exposition import Position, open_position
-from ptahlmud.backtesting.long_trade import ExitSignal, _get_lower_bound_index, _get_position_exit_signal
+from ptahlmud.backtesting.long_trade import (
+    ExitSignal,
+    _get_lower_bound_index,
+    _get_position_exit_signal,
+    calculate_long_trade,
+)
+from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.period import Period
@@ -154,3 +165,22 @@ class GetPositionExitSignalCases:
 def test__get_position_exit_signal(position, current_candle, expected_signal):
     signal = _get_position_exit_signal(position, current_candle)
     assert signal == expected_signal
+
+
+@composite
+def some_fluctuations(draw) -> Fluctuations:
+    total_candles = some.integers(min_value=10, max_value=100)
+
+    period = Period(timeframe="1m")
+    candles: list[Candle] = generate_candles(size=draw(total_candles), period=period)
+    return Fluctuations(candles=candles, period=period)
+
+
+@given(some_fluctuations())
+def test_calculate_long_trade(fluctuations: Fluctuations):
+    # The better here would be to draw a random candle using hypothesis.
+    candle: Candle = random.choice(fluctuations.candles)  # noqa: S311
+    trade = calculate_long_trade(candle=candle, fluctuations=fluctuations, take_profit_pct=0.05, stop_loss_pct=0.05)
+    if trade is not None:
+        assert np.sign(trade.close_price - trade.open_price) == np.sign(trade.total_profit + trade.total_fees)
+        assert trade.open_date < trade.close_date

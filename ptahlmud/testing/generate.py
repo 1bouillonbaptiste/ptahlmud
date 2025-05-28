@@ -34,7 +34,7 @@ def generate_candles(
     if from_date is None:
         initial_open_time = last_close_time - period.to_timedelta() * size
     if to_date is None:
-        last_close_time = from_date + period.to_timedelta() * size
+        last_close_time = initial_open_time + period.to_timedelta() * size
 
     size = int((last_close_time - initial_open_time) / period.to_timedelta())
     close_price: float = 1000
@@ -47,11 +47,11 @@ def generate_candles(
         volume = (np.random.beta(a=2, b=2) / 2 + 0.25) * 1000
         candles.append(
             Candle(
-                open=open_price,
-                high=high_price,
-                low=low_price,
-                close=close_price,
-                volume=volume,
+                open=round(float(open_price), 3),
+                high=round(float(high_price), 3),
+                low=round(float(low_price), 3),
+                close=round(float(close_price), 3),
+                volume=round(float(volume), 3),
                 total_trades=1,
                 open_time=initial_open_time + ii * period.to_timedelta(),
                 close_time=initial_open_time + (ii + 1) * period.to_timedelta() - timedelta(milliseconds=90),
