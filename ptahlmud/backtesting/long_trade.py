@@ -81,18 +81,6 @@ def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
     return ExitSignal(price_signal="hold", date_signal="hold")
 
 
-def _enter_long_position(candle: Candle, take_profit_pct: float, stop_loss_pct: float) -> Position:
-    """Enter a long position at the end of the candle."""
-    return open_position(
-        open_date=candle.close_time,
-        open_price=candle.close,
-        money_to_invest=100,
-        fees_pct=0.001,
-        take_profit=candle.close * (1 + take_profit_pct),
-        stop_loss=candle.close * (1 - stop_loss_pct),
-    )
-
-
 def _get_lower_bound_index(date: datetime, candles: list[Candle]) -> int:
     """Find the index of the candle when the date starts."""
 
@@ -138,5 +126,12 @@ def calculate_long_trade(
     stop_loss_pct: float,
 ) -> Trade | None:
     """Calculate a long trade opened at a candle."""
-    position = _enter_long_position(candle, take_profit_pct, stop_loss_pct)
+    position = open_position(
+        open_date=candle.close_time,
+        open_price=candle.close,
+        money_to_invest=100,
+        fees_pct=0.001,
+        take_profit=candle.close * (1 + take_profit_pct),
+        stop_loss=candle.close * (1 - stop_loss_pct),
+    )
     return _close_long_position(position, fluctuations)
