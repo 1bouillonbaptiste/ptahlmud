@@ -11,7 +11,7 @@ check: # run quality checking tools
 	poetry run mypy .
 
 test: # test the code with pytest
-	poetry run pytest --cov --cov-config=pyproject.toml --cov-report=xml tests/
+	poetry run pytest --cov --cov-config=pyproject.toml --cov-report=html tests/
 
 build: # build package
 	rm -rf dist/
