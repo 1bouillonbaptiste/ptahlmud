@@ -2,7 +2,7 @@ from dataclasses import replace
 from datetime import datetime
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
@@ -174,7 +174,6 @@ def some_fluctuations(draw) -> Fluctuations:
     return Fluctuations(candles=candles, period=period)
 
 
-@settings(max_examples=1)
 @given(
     some_fluctuations(),
     some.floats(min_value=0.001, max_value=100),  # take_profit_pct
@@ -192,14 +191,19 @@ def test_calculate_long_trade(
 
     expected_take_profit = entry_candle.close * (1 + take_profit_pct)
     expected_stop_loss = entry_candle.close * (1 - stop_loss_pct)
+    index_closing_candle = _get_lower_bound_index(date=trade.close_date, candles=fluctuations.candles)
 
-    if trade is None:
-        # price boundaries have not been reached
+    if not trade.reached_take_profit:
         assert all(
-            (candle.high < expected_take_profit) and (candle.low > expected_stop_loss)
-            for candle in fluctuations.candles[1:]  # Skip entry candle
+            candle.high < expected_take_profit
+            for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
         )
-        return
+
+    if not trade.reached_stop_loss:
+        assert all(
+            candle.low > expected_stop_loss
+            for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
+        )
 
     # check temporal properties
     assert trade.open_date == entry_candle.close_time
