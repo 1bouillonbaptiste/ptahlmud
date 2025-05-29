@@ -1,6 +1,6 @@
 """Helper to generate random entities."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import numpy as np
 
@@ -54,7 +54,7 @@ def generate_candles(
                 volume=round(float(volume), 3),
                 total_trades=1,
                 open_time=initial_open_time + ii * period.to_timedelta(),
-                close_time=initial_open_time + (ii + 1) * period.to_timedelta() - timedelta(milliseconds=90),
+                close_time=initial_open_time + (ii + 1) * period.to_timedelta(),
                 high_time=None,
                 low_time=None,
             )
