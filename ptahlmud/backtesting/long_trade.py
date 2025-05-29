@@ -81,18 +81,6 @@ def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
     return ExitSignal(price_signal="hold", date_signal="hold")
 
 
-def _enter_long_position(candle: Candle, take_profit_pct: float, stop_loss_pct: float) -> Position:
-    """Enter a long position at the end of the candle."""
-    return open_position(
-        open_date=candle.close_time,
-        open_price=candle.close,
-        money_to_invest=100,
-        fees_pct=0.001,
-        take_profit=candle.close * (1 + take_profit_pct),
-        stop_loss=candle.close * (1 - stop_loss_pct),
-    )
-
-
 def _get_lower_bound_index(date: datetime, candles: list[Candle]) -> int:
     """Find the index of the candle when the date starts."""
 
@@ -112,23 +100,27 @@ def _get_lower_bound_index(date: datetime, candles: list[Candle]) -> int:
     return middle_index + _get_lower_bound_index(date=date, candles=candles[middle_index:])
 
 
-def _close_long_position(position: Position, fluctuations: Fluctuations) -> Trade | None:
+def _close_long_position(position: Position, fluctuations: Fluctuations) -> Trade:
     """Calculate the trade resulting from the position."""
     starting_index = _get_lower_bound_index(date=position.open_date, candles=fluctuations.candles)
     if starting_index >= fluctuations.size:
-        return None
+        raise ValueError("Position opened after fluctuations end.")
     for candle in fluctuations.candles[starting_index:]:
         signal = _get_position_exit_signal(position=position, candle=candle)
         if signal.hold_position:
             continue
-
         close_price, close_date = signal.to_price_date(position=position, candle=candle)
         return close_position(
             position=position,
             close_date=close_date,
             close_price=close_price,
         )
-    return None
+    last_candle = fluctuations.candles[-1]
+    return close_position(
+        position=position,
+        close_date=last_candle.close_time,
+        close_price=last_candle.close,
+    )
 
 
 def calculate_long_trade(
@@ -136,7 +128,14 @@ def calculate_long_trade(
     fluctuations: Fluctuations,
     take_profit_pct: float,
     stop_loss_pct: float,
-) -> Trade | None:
+) -> Trade:
     """Calculate a long trade opened at a candle."""
-    position = _enter_long_position(candle, take_profit_pct, stop_loss_pct)
+    position = open_position(
+        open_date=candle.close_time,
+        open_price=candle.close,
+        money_to_invest=100,
+        fees_pct=0.001,
+        take_profit=candle.close * (1 + take_profit_pct),
+        stop_loss=candle.close * (1 - stop_loss_pct),
+    )
     return _close_long_position(position, fluctuations)

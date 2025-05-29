@@ -11,6 +11,7 @@ requires-python = ">=3.10,<4.0"
 [tool.poetry.dependencies]
 pydantic = "^2.11.4"
 numpy = "^2.2.6"
+hypothesis = "^6.131.30"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

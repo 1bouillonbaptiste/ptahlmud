@@ -2,10 +2,19 @@ from dataclasses import replace
 from datetime import datetime
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as some
+from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.exposition import Position, open_position
-from ptahlmud.backtesting.long_trade import ExitSignal, _get_lower_bound_index, _get_position_exit_signal
+from ptahlmud.backtesting.long_trade import (
+    ExitSignal,
+    _get_lower_bound_index,
+    _get_position_exit_signal,
+    calculate_long_trade,
+)
+from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.period import Period
@@ -50,7 +59,7 @@ class GetLowerBoundIndexCases:
 
 
 @parametrize_with_cases("date, candles, expected_index", cases=GetLowerBoundIndexCases)
-def test__get_lower_bound_index(date, candles, expected_index):
+def test__get_lower_bound_index(date: datetime, candles: list[Candle], expected_index: int):
     index = _get_lower_bound_index(date, candles)
     assert index == expected_index
 
@@ -61,7 +70,7 @@ def fake_position() -> Position:
 
 
 @pytest.fixture
-def candle():
+def candle() -> Candle:
     return Candle(
         open_time=datetime(2024, 8, 25),
         close_time=datetime(2024, 8, 26),
@@ -151,6 +160,64 @@ class GetPositionExitSignalCases:
 
 
 @parametrize_with_cases("position, current_candle, expected_signal", cases=GetPositionExitSignalCases)
-def test__get_position_exit_signal(position, current_candle, expected_signal):
+def test__get_position_exit_signal(position: Position, current_candle: Candle, expected_signal: ExitSignal):
     signal = _get_position_exit_signal(position, current_candle)
     assert signal == expected_signal
+
+
+@composite
+def some_fluctuations(draw) -> Fluctuations:
+    total_candles = some.integers(min_value=10, max_value=100)
+
+    period = Period(timeframe="1m")
+    candles: list[Candle] = generate_candles(size=draw(total_candles), period=period)
+    return Fluctuations(candles=candles, period=period)
+
+
+@given(
+    some_fluctuations(),
+    some.floats(min_value=0.001, max_value=100),  # take_profit_pct
+    some.floats(min_value=0.001, max_value=1),  # stop_loss_pct
+)
+def test_calculate_long_trade(
+    fluctuations: Fluctuations,
+    take_profit_pct: float,
+    stop_loss_pct: float,
+):
+    entry_candle: Candle = fluctuations.candles[0]
+    trade = calculate_long_trade(
+        candle=entry_candle, fluctuations=fluctuations, take_profit_pct=take_profit_pct, stop_loss_pct=stop_loss_pct
+    )
+
+    expected_take_profit = entry_candle.close * (1 + take_profit_pct)
+    expected_stop_loss = entry_candle.close * (1 - stop_loss_pct)
+    index_closing_candle = _get_lower_bound_index(date=trade.close_date, candles=fluctuations.candles)
+
+    if not trade.reached_take_profit:
+        assert all(
+            candle.high < expected_take_profit
+            for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
+        )
+
+    if not trade.reached_stop_loss:
+        assert all(
+            candle.low > expected_stop_loss
+            for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
+        )
+
+    # check temporal properties
+    assert trade.open_date == entry_candle.close_time
+    assert trade.close_date > trade.open_date
+    assert trade.close_date <= fluctuations.candles[-1].close_time
+
+    # check price boundaries
+    assert trade.take_profit == pytest.approx(expected_take_profit)
+    assert trade.stop_loss == pytest.approx(expected_stop_loss)
+
+    # check profit/loss consistency
+    if trade.close_price == trade.open_price:
+        assert trade.total_profit + trade.total_fees == 0
+    elif trade.close_price > trade.open_price:
+        assert trade.total_profit + trade.total_fees > 0
+    else:
+        assert trade.total_profit + trade.total_fees < 0
