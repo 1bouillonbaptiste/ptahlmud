@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from hypothesis import given
@@ -31,7 +32,7 @@ def test_close_position(fake_position):
 
 
 @composite
-def valid_position_parameters(draw):
+def valid_position_parameters(draw) -> dict[str, Any]:
     open_date = draw(some.datetimes(min_value=datetime(2000, 1, 1), max_value=datetime(2050, 12, 31)))
 
     open_price = draw(some.decimals(min_value=Decimal("0.01"), max_value=Decimal("1_000_000")))
@@ -57,9 +58,8 @@ def valid_position_parameters(draw):
 
 
 @composite
-def valid_trade_parameters(draw):
+def valid_trade_parameters(draw) -> tuple[dict[str, Any], dict[str, Any]]:
     position_params = draw(valid_position_parameters())
-    position = open_position(**position_params)
 
     # Generate close_date after open_date
     close_date = draw(
@@ -70,10 +70,15 @@ def valid_trade_parameters(draw):
 
     # Generate close_price between stop_loss and take_profit
     close_price = draw(
-        some.decimals(min_value=Decimal(str(position.stop_loss)), max_value=Decimal(str(position.take_profit)))
+        some.decimals(
+            min_value=Decimal(str(position_params["stop_loss"])), max_value=Decimal(str(position_params["take_profit"]))
+        )
     )
 
-    return position, close_date, float(close_price)
+    return position_params, {
+        "close_date": close_date,
+        "close_price": float(close_price),
+    }
 
 
 @given(valid_position_parameters())
@@ -98,8 +103,9 @@ def test_position_properties(params):
 
 @given(valid_trade_parameters())
 def test_trade_properties(params):
-    position, close_date, close_price = params
-    trade = close_position(position, close_date, close_price)
+    position_params, trade_params = params
+    position = open_position(**position_params)
+    trade = close_position(position, **trade_params)
 
     # basic validation
     assert trade.is_closed
