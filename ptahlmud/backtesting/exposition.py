@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 class Side(str, enum.Enum):
     LONG = "LONG"
+    SHORT = "SHORT"
 
 
 @dataclass
@@ -71,7 +72,10 @@ class Trade(Position):
     @property
     def total_profit(self) -> float:
         """Overall profit of the trade."""
-        return self.receipt - self.initial_investment - self.close_fees
+        trade_return = self.receipt - self.initial_investment + self.open_fees
+        if self.side == Side.SHORT:
+            trade_return *= -1
+        return trade_return - self.total_fees
 
     @property
     def total_fees(self) -> float:
@@ -109,6 +113,7 @@ def open_position(
     open_price: float,
     money_to_invest: float,
     fees_pct: float,
+    side: Side,
     stop_loss: float = 0,
     take_profit: float = float("inf"),
 ) -> Position:
@@ -121,6 +126,7 @@ def open_position(
         open_price: the price at which the position is opened
         money_to_invest: the amount of money to be invested in the position
         fees_pct: cost in percentage applied by a broker
+        side: the side of the position
         stop_loss: the price level at which the position should be automatically closed to limit losses
         take_profit: the price level at which the position should be automatically closed to secure profits
 
@@ -135,9 +141,9 @@ def open_position(
         volume=volume,
         initial_investment=money_to_invest,
         fees_pct=fees_pct,
+        side=side,
         stop_loss=stop_loss,
         take_profit=take_profit,
-        side=Side.LONG,
     )
 
 

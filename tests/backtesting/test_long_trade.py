@@ -7,7 +7,7 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Position, open_position
+from ptahlmud.backtesting.exposition import Position, Side, open_position
 from ptahlmud.backtesting.long_trade import (
     ExitSignal,
     _get_lower_bound_index,
@@ -66,7 +66,13 @@ def test__get_lower_bound_index(date: datetime, candles: list[Candle], expected_
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(open_date=datetime(2024, 8, 20), open_price=100, money_to_invest=50, fees_pct=0.001)
+    return open_position(
+        open_date=datetime(2024, 8, 20),
+        open_price=100,
+        money_to_invest=50,
+        fees_pct=0.001,
+        side=Side.LONG,
+    )
 
 
 @pytest.fixture
@@ -204,6 +210,8 @@ def test_calculate_long_trade(
             candle.low > expected_stop_loss
             for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
         )
+
+    assert trade.side == Side.LONG
 
     # check temporal properties
     assert trade.open_date == entry_candle.close_time

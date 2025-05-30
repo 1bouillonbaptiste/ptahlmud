@@ -12,7 +12,13 @@ from ptahlmud.backtesting.exposition import Position, Side, close_position, open
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(open_date=datetime(2024, 8, 20), open_price=100, money_to_invest=50, fees_pct=0.001)
+    return open_position(
+        open_date=datetime(2024, 8, 20),
+        open_price=100,
+        money_to_invest=50,
+        fees_pct=0.001,
+        side=Side.LONG,
+    )
 
 
 def test_open_position(fake_position):
@@ -41,6 +47,8 @@ def valid_position_parameters(draw) -> dict[str, Any]:
 
     fees_pct = draw(some.decimals(min_value=Decimal("0.0001"), max_value=Decimal("0.1")))
 
+    side = draw(some.sampled_from([Side.LONG, Side.SHORT]))
+
     # Ensure take_profit > open_price
     take_profit = draw(some.decimals(min_value=open_price * Decimal("1.001"), max_value=open_price * Decimal("1000")))
 
@@ -52,6 +60,7 @@ def valid_position_parameters(draw) -> dict[str, Any]:
         "open_price": float(open_price),
         "money_to_invest": float(money_to_invest),
         "fees_pct": float(fees_pct),
+        "side": side,
         "take_profit": float(take_profit),
         "stop_loss": float(stop_loss),
     }
@@ -93,7 +102,6 @@ def test_position_properties(params):
     # logical constraints
     assert position.stop_loss < position.open_price
     assert position.take_profit > position.open_price
-    assert position.side == Side.LONG
     assert not position.is_closed
 
     # financial calculations
@@ -119,5 +127,8 @@ def test_trade_properties(params):
     assert trade.total_fees == pytest.approx(trade.open_fees + trade.close_fees)
 
     # financial consistency
-    expected_profit = (trade.close_price - trade.open_price) * trade.volume - trade.total_fees
+    trade_return = (trade.close_price - trade.open_price) * trade.volume
+    if trade.side == Side.SHORT:
+        trade_return *= -1
+    expected_profit = trade_return - trade.total_fees
     assert trade.total_profit == pytest.approx(expected_profit)

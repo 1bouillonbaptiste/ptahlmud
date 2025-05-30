@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from ptahlmud.backtesting.exposition import Position, Trade, close_position, open_position
+from ptahlmud.backtesting.exposition import Position, Side, Trade, close_position, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
 
@@ -135,6 +135,7 @@ def calculate_long_trade(
         open_price=candle.close,
         money_to_invest=100,
         fees_pct=0.001,
+        side=Side.LONG,
         take_profit=candle.close * (1 + take_profit_pct),
         stop_loss=candle.close * (1 - stop_loss_pct),
     )
