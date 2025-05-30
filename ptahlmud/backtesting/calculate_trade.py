@@ -125,8 +125,8 @@ def _get_lower_bound_index(date: datetime, candles: list[Candle]) -> int:
     return middle_index + _get_lower_bound_index(date=date, candles=candles[middle_index:])
 
 
-def _close_long_position(position: Position, fluctuations: Fluctuations) -> Trade:
-    """Calculate the trade resulting from the position."""
+def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
+    """Simulate the trade resulting from the position and market data."""
     starting_index = _get_lower_bound_index(date=position.open_date, candles=fluctuations.candles)
     if starting_index >= fluctuations.size:
         raise ValueError("Position opened after fluctuations end.")
@@ -164,4 +164,4 @@ def calculate_trade(
         higher_barrier=target.high_value(candle.close),
         lower_barrier=target.low_value(candle.close),
     )
-    return _close_long_position(position, fluctuations)
+    return _close_position(position, fluctuations)
