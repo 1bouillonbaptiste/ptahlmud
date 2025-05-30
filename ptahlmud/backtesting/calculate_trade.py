@@ -140,3 +140,22 @@ def calculate_long_trade(
         stop_loss=candle.close * (1 - stop_loss_pct),
     )
     return _close_long_position(position, fluctuations)
+
+
+def calculate_short_trade(
+    candle: Candle,
+    fluctuations: Fluctuations,
+    take_profit_pct: float,
+    stop_loss_pct: float,
+) -> Trade:
+    """Calculate a short trade opened at a candle."""
+    position = open_position(
+        open_date=candle.close_time,
+        open_price=candle.close,
+        money_to_invest=100,
+        fees_pct=0.001,
+        side=Side.SHORT,
+        take_profit=candle.close * (1 + stop_loss_pct),
+        stop_loss=candle.close * (1 - take_profit_pct),
+    )
+    return _close_long_position(position, fluctuations)

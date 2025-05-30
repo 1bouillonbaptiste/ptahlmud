@@ -7,13 +7,14 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Position, Side, open_position
-from ptahlmud.backtesting.long_trade import (
+from ptahlmud.backtesting.calculate_trade import (
     ExitSignal,
     _get_lower_bound_index,
     _get_position_exit_signal,
     calculate_long_trade,
+    calculate_short_trade,
 )
+from ptahlmud.backtesting.exposition import Position, Side, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
@@ -229,3 +230,54 @@ def test_calculate_long_trade(
         assert trade.total_profit + trade.total_fees > 0
     else:
         assert trade.total_profit + trade.total_fees < 0
+
+
+@given(
+    some_fluctuations(),
+    some.floats(min_value=0.001, max_value=100),  # stop_loss_pct
+    some.floats(min_value=0.001, max_value=1),  # take_profit_pct
+)
+def test_calculate_short_trade(
+    fluctuations: Fluctuations,
+    stop_loss_pct: float,
+    take_profit_pct: float,
+):
+    entry_candle: Candle = fluctuations.candles[0]
+    trade = calculate_short_trade(
+        candle=entry_candle, fluctuations=fluctuations, take_profit_pct=take_profit_pct, stop_loss_pct=stop_loss_pct
+    )
+
+    expected_take_profit = entry_candle.close * (1 + stop_loss_pct)
+    expected_stop_loss = entry_candle.close * (1 - take_profit_pct)
+    index_closing_candle = _get_lower_bound_index(date=trade.close_date, candles=fluctuations.candles)
+
+    if not trade.reached_take_profit:
+        assert all(
+            candle.high < expected_take_profit
+            for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
+        )
+
+    if not trade.reached_stop_loss:
+        assert all(
+            candle.low > expected_stop_loss
+            for candle in fluctuations.candles[1:index_closing_candle]  # Skip entry candle
+        )
+
+    assert trade.side == Side.SHORT
+
+    # check temporal properties
+    assert trade.open_date == entry_candle.close_time
+    assert trade.close_date > trade.open_date
+    assert trade.close_date <= fluctuations.candles[-1].close_time
+
+    # check price boundaries
+    assert trade.take_profit == pytest.approx(expected_take_profit)
+    assert trade.stop_loss == pytest.approx(expected_stop_loss)
+
+    # check profit/loss consistency
+    if trade.close_price == trade.open_price:
+        assert trade.total_profit + trade.total_fees == 0
+    elif trade.close_price > trade.open_price:
+        assert trade.total_profit + trade.total_fees < 0
+    else:
+        assert trade.total_profit + trade.total_fees > 0
