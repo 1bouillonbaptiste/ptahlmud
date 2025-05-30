@@ -4,9 +4,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ptahlmud.backtesting.exposition import Position, Side, Trade, close_position, open_position
+from ptahlmud.backtesting.exposition import Position, Trade, close_position, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
+from ptahlmud.types.signal import Side
 
 
 class TradingTarget(BaseModel):
