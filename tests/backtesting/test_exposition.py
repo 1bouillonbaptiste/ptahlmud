@@ -49,11 +49,13 @@ def valid_position_parameters(draw) -> dict[str, Any]:
 
     side = draw(some.sampled_from([Side.LONG, Side.SHORT]))
 
-    # Ensure take_profit > open_price
-    take_profit = draw(some.decimals(min_value=open_price * Decimal("1.001"), max_value=open_price * Decimal("1000")))
+    # Ensure higher barrier > open_price
+    higher_barrier = draw(
+        some.decimals(min_value=open_price * Decimal("1.001"), max_value=open_price * Decimal("1000"))
+    )
 
-    # Ensure stop_loss < open_price
-    stop_loss = draw(some.decimals(min_value=open_price * Decimal("0.0"), max_value=open_price * Decimal("0.999")))
+    # Ensure lower barrier < open_price
+    lower_barrier = draw(some.decimals(min_value=open_price * Decimal("0.0"), max_value=open_price * Decimal("0.999")))
 
     return {
         "open_date": open_date,
@@ -61,8 +63,8 @@ def valid_position_parameters(draw) -> dict[str, Any]:
         "money_to_invest": float(money_to_invest),
         "fees_pct": float(fees_pct),
         "side": side,
-        "take_profit": float(take_profit),
-        "stop_loss": float(stop_loss),
+        "higher_barrier": float(higher_barrier),
+        "lower_barrier": float(lower_barrier),
     }
 
 
@@ -77,10 +79,11 @@ def valid_trade_parameters(draw) -> tuple[dict[str, Any], dict[str, Any]]:
         )
     )
 
-    # Generate close_price between stop_loss and take_profit
+    # Generate close_price between lower and higher barriers
     close_price = draw(
         some.decimals(
-            min_value=Decimal(str(position_params["stop_loss"])), max_value=Decimal(str(position_params["take_profit"]))
+            min_value=Decimal(str(position_params["lower_barrier"])),
+            max_value=Decimal(str(position_params["higher_barrier"])),
         )
     )
 
@@ -100,8 +103,8 @@ def test_position_properties(params):
     assert position.fees_pct > 0
 
     # logical constraints
-    assert position.stop_loss < position.open_price
-    assert position.take_profit > position.open_price
+    assert position.lower_barrier < position.open_price
+    assert position.higher_barrier > position.open_price
     assert not position.is_closed
 
     # financial calculations
@@ -118,7 +121,7 @@ def test_trade_properties(params):
     # basic validation
     assert trade.is_closed
     assert trade.close_date >= trade.open_date
-    assert trade.stop_loss <= trade.close_price <= trade.take_profit
+    assert trade.lower_barrier <= trade.close_price <= trade.higher_barrier
     assert trade.total_duration == (trade.close_date - trade.open_date)
 
     # financial calculations

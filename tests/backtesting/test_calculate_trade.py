@@ -105,64 +105,64 @@ class GetPositionExitSignalCases:
         """Position has no security, don't close it."""
         return fake_position, candle, ExitSignal(price_signal="hold", date_signal="hold")
 
-    def case_take_profit_at_high_time(self, fake_position, candle):
+    def case_higher_barrier_at_high_time(self, fake_position, candle):
         high_time = datetime(2024, 8, 25, hour=12)
         low_time = datetime(2024, 8, 25, hour=13)
         return (
-            replace(fake_position, take_profit=110),
+            replace(fake_position, higher_barrier=110),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="take_profit", date_signal="high"),
+            ExitSignal(price_signal="high_barrier", date_signal="high"),
         )
 
-    def case_stop_loss_at_low_time(self, fake_position, candle):
+    def case_lower_barrier_at_low_time(self, fake_position, candle):
         high_time = datetime(2024, 8, 25, hour=12)
         low_time = datetime(2024, 8, 25, hour=13)
         return (
-            replace(fake_position, stop_loss=95),
+            replace(fake_position, lower_barrier=95),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="stop_loss", date_signal="low"),
+            ExitSignal(price_signal="low_barrier", date_signal="low"),
         )
 
     def case_exit_undefined_time(self, fake_position, candle):
         """High and low times are None, take close time and close pice."""
         return (
-            replace(fake_position, take_profit=105, stop_loss=95),
+            replace(fake_position, higher_barrier=105, lower_barrier=95),
             candle,
             ExitSignal(price_signal="close", date_signal="close"),
         )
 
-    def case_take_profit_undefined_time(self, fake_position, candle):
+    def case_higher_barrier_undefined_time(self, fake_position, candle):
         """High and low times are None, take close time and close price."""
         return (
-            replace(fake_position, take_profit=105),
+            replace(fake_position, higher_barrier=105),
             candle,
-            ExitSignal(price_signal="take_profit", date_signal="close"),
+            ExitSignal(price_signal="high_barrier", date_signal="close"),
         )
 
-    def case_stop_loss_undefined_time(self, fake_position, candle):
+    def case_lower_barrier_undefined_time(self, fake_position, candle):
         """High and low times are None, take close time and close price."""
         return (
-            replace(fake_position, stop_loss=95),
+            replace(fake_position, lower_barrier=95),
             candle,
-            ExitSignal(price_signal="stop_loss", date_signal="close"),
+            ExitSignal(price_signal="low_barrier", date_signal="close"),
         )
 
     def case_tp_before_sl(self, fake_position, candle):
         high_time = datetime(2024, 8, 25, hour=12)
         low_time = datetime(2024, 8, 25, hour=13)
         return (
-            replace(fake_position, take_profit=105, stop_loss=95),
+            replace(fake_position, higher_barrier=105, lower_barrier=95),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="take_profit", date_signal="high"),
+            ExitSignal(price_signal="high_barrier", date_signal="high"),
         )
 
     def case_sl_before_tp(self, fake_position, candle):
         high_time = datetime(2024, 8, 25, hour=12)
         low_time = datetime(2024, 8, 25, hour=3)
         return (
-            replace(fake_position, take_profit=105, stop_loss=95),
+            replace(fake_position, higher_barrier=105, lower_barrier=95),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="stop_loss", date_signal="low"),
+            ExitSignal(price_signal="low_barrier", date_signal="low"),
         )
 
 
@@ -205,15 +205,15 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
     higher_barrier = target.high_value(entry_candle.close)
     lower_barrier = target.low_value(entry_candle.close)
 
-    assert trade.take_profit == pytest.approx(higher_barrier)
-    assert trade.stop_loss == pytest.approx(lower_barrier)
+    assert trade.higher_barrier == pytest.approx(higher_barrier)
+    assert trade.lower_barrier == pytest.approx(lower_barrier)
 
     index_closing_candle = _get_lower_bound_index(date=trade.close_date, candles=fluctuations.candles)
     candles_during_trade = fluctuations.candles[1:index_closing_candle]  # Skip entry candle
-    if not trade.reached_take_profit:
+    if not trade.reached_higher_barrier:
         assert all(candle.high < higher_barrier for candle in candles_during_trade)
 
-    if not trade.reached_stop_loss:
+    if not trade.reached_lower_barrier:
         assert all(candle.low > lower_barrier for candle in candles_during_trade)
 
 
