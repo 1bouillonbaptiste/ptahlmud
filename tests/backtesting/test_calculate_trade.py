@@ -11,8 +11,7 @@ from ptahlmud.backtesting.calculate_trade import (
     ExitSignal,
     _get_lower_bound_index,
     _get_position_exit_signal,
-    calculate_long_trade,
-    calculate_short_trade,
+    calculate_trade,
 )
 from ptahlmud.backtesting.exposition import Position, Side, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
@@ -192,8 +191,12 @@ def test_calculate_long_trade(
     stop_loss_pct: float,
 ):
     entry_candle: Candle = fluctuations.candles[0]
-    trade = calculate_long_trade(
-        candle=entry_candle, fluctuations=fluctuations, take_profit_pct=take_profit_pct, stop_loss_pct=stop_loss_pct
+    trade = calculate_trade(
+        candle=entry_candle,
+        fluctuations=fluctuations,
+        take_profit_pct=take_profit_pct,
+        stop_loss_pct=stop_loss_pct,
+        side=Side.LONG,
     )
 
     expected_take_profit = entry_candle.close * (1 + take_profit_pct)
@@ -243,8 +246,12 @@ def test_calculate_short_trade(
     take_profit_pct: float,
 ):
     entry_candle: Candle = fluctuations.candles[0]
-    trade = calculate_short_trade(
-        candle=entry_candle, fluctuations=fluctuations, take_profit_pct=take_profit_pct, stop_loss_pct=stop_loss_pct
+    trade = calculate_trade(
+        candle=entry_candle,
+        fluctuations=fluctuations,
+        take_profit_pct=take_profit_pct,
+        stop_loss_pct=stop_loss_pct,
+        side=Side.SHORT,
     )
 
     expected_take_profit = entry_candle.close * (1 + stop_loss_pct)
