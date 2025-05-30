@@ -2,9 +2,34 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from ptahlmud.backtesting.exposition import Position, Trade, close_position, open_position
+from pydantic import BaseModel, Field
+
+from ptahlmud.backtesting.exposition import Position, Side, Trade, close_position, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
+
+
+class TradingTarget(BaseModel):
+    """Represents a trading target.
+
+    The target is represented by _barriers_ where the asset is sold if it reached either barrier.
+    These barriers are _always_ expressed in percentage to reference price.
+
+    Attributes:
+        high: higher barrier, defaults to inf or "never sell"
+        low: lower barrier, default to 1 or "never sell"
+    """
+
+    high: float = Field(gt=0, lt=float("inf"))
+    low: float = Field(gt=0, lt=1)
+
+    def high_value(self, price: float) -> float:
+        """Convert the higher barrier in pct to actual price value."""
+        return price * (1 + self.high)
+
+    def low_value(self, price: float) -> float:
+        """Convert the lower barrier in pct to actual price value."""
+        return price * (1 - self.low)
 
 
 @dataclass(slots=True)
@@ -19,7 +44,7 @@ class ExitSignal:
     - close at close time
     """
 
-    price_signal: Literal["take_profit", "stop_loss", "close", "hold"]
+    price_signal: Literal["high_barrier", "low_barrier", "close", "hold"]
     date_signal: Literal["high", "low", "close", "hold"]
 
     @property
@@ -30,10 +55,10 @@ class ExitSignal:
         """Convert a signal to price ad date values."""
 
         match self.price_signal:
-            case "take_profit":
-                price = position.take_profit
-            case "stop_loss":
-                price = position.stop_loss
+            case "high_barrier":
+                price = position.higher_barrier
+            case "low_barrier":
+                price = position.lower_barrier
             case "close":
                 price = candle.close
             case "hold":
@@ -56,25 +81,25 @@ class ExitSignal:
 
 def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
     """Check if a candle reaches position to take profit or stop loss."""
-    price_reach_tp = candle.high >= position.take_profit
-    price_reach_sl = candle.low <= position.stop_loss
+    price_reach_tp = candle.high >= position.higher_barrier
+    price_reach_sl = candle.low <= position.lower_barrier
 
     if price_reach_tp and price_reach_sl:  # candle's price range is very wide, check which bound was reached first
         if (candle.high_time is not None) and (candle.low_time is not None):
             if candle.high_time < candle.low_time:  # price reached high before low
-                return ExitSignal(price_signal="take_profit", date_signal="high")
+                return ExitSignal(price_signal="high_barrier", date_signal="high")
             else:  # price reached low before high
-                return ExitSignal(price_signal="stop_loss", date_signal="low")
+                return ExitSignal(price_signal="low_barrier", date_signal="low")
         else:  # we don't have granularity, assume close price is close enough to real sell price
             return ExitSignal(price_signal="close", date_signal="close")
     elif price_reach_tp:
         return ExitSignal(
-            price_signal="take_profit",
+            price_signal="high_barrier",
             date_signal="high" if candle.high_time else "close",
         )
     elif price_reach_sl:
         return ExitSignal(
-            price_signal="stop_loss",
+            price_signal="low_barrier",
             date_signal="low" if candle.low_time else "close",
         )
 
@@ -123,19 +148,20 @@ def _close_long_position(position: Position, fluctuations: Fluctuations) -> Trad
     )
 
 
-def calculate_long_trade(
+def calculate_trade(
     candle: Candle,
     fluctuations: Fluctuations,
-    take_profit_pct: float,
-    stop_loss_pct: float,
+    target: TradingTarget,
+    side: Side,
 ) -> Trade:
-    """Calculate a long trade opened at a candle."""
+    """Calculate a trade."""
     position = open_position(
         open_date=candle.close_time,
         open_price=candle.close,
         money_to_invest=100,
         fees_pct=0.001,
-        take_profit=candle.close * (1 + take_profit_pct),
-        stop_loss=candle.close * (1 - stop_loss_pct),
+        side=side,
+        higher_barrier=target.high_value(candle.close),
+        lower_barrier=target.low_value(candle.close),
     )
     return _close_long_position(position, fluctuations)

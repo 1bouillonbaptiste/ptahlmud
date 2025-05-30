@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 class Side(str, enum.Enum):
     LONG = "LONG"
+    SHORT = "SHORT"
 
 
 @dataclass
@@ -21,8 +22,8 @@ class Position:
         open_date: the date when the position was open
         initial_investment: the initial amount of currency the trader invested
         fees_pct: cost in percentage of opening the position
-        stop_loss: close the position (stop your losses) if price drops too low
-        take_profit: close the position (take your profits) if price reaches your target
+        lower_barrier: close the position if price reaches this barrier
+        higher_barrier: close the position if the price reaches this barrier
     """
 
     side: Side
@@ -33,8 +34,8 @@ class Position:
     initial_investment: float
     fees_pct: float
 
-    stop_loss: float
-    take_profit: float
+    lower_barrier: float
+    higher_barrier: float
 
     @property
     def open_fees(self) -> float:
@@ -71,7 +72,10 @@ class Trade(Position):
     @property
     def total_profit(self) -> float:
         """Overall profit of the trade."""
-        return self.receipt - self.initial_investment - self.close_fees
+        trade_return = self.receipt - self.initial_investment + self.open_fees
+        if self.side == Side.SHORT:
+            trade_return *= -1
+        return trade_return - self.total_fees
 
     @property
     def total_fees(self) -> float:
@@ -89,14 +93,14 @@ class Trade(Position):
         return True
 
     @property
-    def reached_take_profit(self) -> bool:
+    def reached_higher_barrier(self) -> bool:
         """Whether the trade reached the take profit."""
-        return self.close_price >= self.take_profit
+        return self.close_price >= self.higher_barrier
 
     @property
-    def reached_stop_loss(self) -> bool:
+    def reached_lower_barrier(self) -> bool:
         """Whether the trade reached the stop loss."""
-        return self.close_price <= self.stop_loss
+        return self.close_price <= self.lower_barrier
 
 
 def _calculate_fees(investment: float, fees_pct: float) -> float:
@@ -109,8 +113,9 @@ def open_position(
     open_price: float,
     money_to_invest: float,
     fees_pct: float,
-    stop_loss: float = 0,
-    take_profit: float = float("inf"),
+    side: Side,
+    lower_barrier: float = 0,
+    higher_barrier: float = float("inf"),
 ) -> Position:
     """Opens a new trading position.
 
@@ -121,8 +126,9 @@ def open_position(
         open_price: the price at which the position is opened
         money_to_invest: the amount of money to be invested in the position
         fees_pct: cost in percentage applied by a broker
-        stop_loss: the price level at which the position should be automatically closed to limit losses
-        take_profit: the price level at which the position should be automatically closed to secure profits
+        side: the side of the position
+        lower_barrier: the price level at which the position should be automatically closed to limit losses
+        higher_barrier: the price level at which the position should be automatically closed to secure profits
 
     Returns:
         a new instance of position
@@ -135,9 +141,9 @@ def open_position(
         volume=volume,
         initial_investment=money_to_invest,
         fees_pct=fees_pct,
-        stop_loss=stop_loss,
-        take_profit=take_profit,
-        side=Side.LONG,
+        side=side,
+        lower_barrier=lower_barrier,
+        higher_barrier=higher_barrier,
     )
 
 

@@ -12,7 +12,13 @@ from ptahlmud.backtesting.exposition import Position, Side, close_position, open
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(open_date=datetime(2024, 8, 20), open_price=100, money_to_invest=50, fees_pct=0.001)
+    return open_position(
+        open_date=datetime(2024, 8, 20),
+        open_price=100,
+        money_to_invest=50,
+        fees_pct=0.001,
+        side=Side.LONG,
+    )
 
 
 def test_open_position(fake_position):
@@ -41,19 +47,24 @@ def valid_position_parameters(draw) -> dict[str, Any]:
 
     fees_pct = draw(some.decimals(min_value=Decimal("0.0001"), max_value=Decimal("0.1")))
 
-    # Ensure take_profit > open_price
-    take_profit = draw(some.decimals(min_value=open_price * Decimal("1.001"), max_value=open_price * Decimal("1000")))
+    side = draw(some.sampled_from([Side.LONG, Side.SHORT]))
 
-    # Ensure stop_loss < open_price
-    stop_loss = draw(some.decimals(min_value=open_price * Decimal("0.0"), max_value=open_price * Decimal("0.999")))
+    # Ensure higher barrier > open_price
+    higher_barrier = draw(
+        some.decimals(min_value=open_price * Decimal("1.001"), max_value=open_price * Decimal("1000"))
+    )
+
+    # Ensure lower barrier < open_price
+    lower_barrier = draw(some.decimals(min_value=open_price * Decimal("0.0"), max_value=open_price * Decimal("0.999")))
 
     return {
         "open_date": open_date,
         "open_price": float(open_price),
         "money_to_invest": float(money_to_invest),
         "fees_pct": float(fees_pct),
-        "take_profit": float(take_profit),
-        "stop_loss": float(stop_loss),
+        "side": side,
+        "higher_barrier": float(higher_barrier),
+        "lower_barrier": float(lower_barrier),
     }
 
 
@@ -68,10 +79,11 @@ def valid_trade_parameters(draw) -> tuple[dict[str, Any], dict[str, Any]]:
         )
     )
 
-    # Generate close_price between stop_loss and take_profit
+    # Generate close_price between lower and higher barriers
     close_price = draw(
         some.decimals(
-            min_value=Decimal(str(position_params["stop_loss"])), max_value=Decimal(str(position_params["take_profit"]))
+            min_value=Decimal(str(position_params["lower_barrier"])),
+            max_value=Decimal(str(position_params["higher_barrier"])),
         )
     )
 
@@ -91,9 +103,8 @@ def test_position_properties(params):
     assert position.fees_pct > 0
 
     # logical constraints
-    assert position.stop_loss < position.open_price
-    assert position.take_profit > position.open_price
-    assert position.side == Side.LONG
+    assert position.lower_barrier < position.open_price
+    assert position.higher_barrier > position.open_price
     assert not position.is_closed
 
     # financial calculations
@@ -110,7 +121,7 @@ def test_trade_properties(params):
     # basic validation
     assert trade.is_closed
     assert trade.close_date >= trade.open_date
-    assert trade.stop_loss <= trade.close_price <= trade.take_profit
+    assert trade.lower_barrier <= trade.close_price <= trade.higher_barrier
     assert trade.total_duration == (trade.close_date - trade.open_date)
 
     # financial calculations
@@ -119,5 +130,8 @@ def test_trade_properties(params):
     assert trade.total_fees == pytest.approx(trade.open_fees + trade.close_fees)
 
     # financial consistency
-    expected_profit = (trade.close_price - trade.open_price) * trade.volume - trade.total_fees
+    trade_return = (trade.close_price - trade.open_price) * trade.volume
+    if trade.side == Side.SHORT:
+        trade_return *= -1
+    expected_profit = trade_return - trade.total_fees
     assert trade.total_profit == pytest.approx(expected_profit)
