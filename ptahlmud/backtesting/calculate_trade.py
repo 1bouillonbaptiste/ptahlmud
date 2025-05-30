@@ -2,9 +2,34 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
+from pydantic import BaseModel, Field
+
 from ptahlmud.backtesting.exposition import Position, Side, Trade, close_position, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
+
+
+class TradingTarget(BaseModel):
+    """Represents a trading target.
+
+    The target is represented by _barriers_ where the asset is sold if it reached either barrier.
+    These barriers are _always_ expressed in percentage to reference price.
+
+    Attributes:
+        high: higher barrier, defaults to inf or "never sell"
+        low: lower barrier, default to 1 or "never sell"
+    """
+
+    high: float = Field(gt=0, lt=float("inf"))
+    low: float = Field(gt=0, lt=1)
+
+    def high_value(self, price: float) -> float:
+        """Convert the higher barrier in pct to actual price value."""
+        return price * (1 + self.high)
+
+    def low_value(self, price: float) -> float:
+        """Convert the lower barrier in pct to actual price value."""
+        return price * (1 - self.low)
 
 
 @dataclass(slots=True)
@@ -126,24 +151,17 @@ def _close_long_position(position: Position, fluctuations: Fluctuations) -> Trad
 def calculate_trade(
     candle: Candle,
     fluctuations: Fluctuations,
-    take_profit_pct: float,
-    stop_loss_pct: float,
+    target: TradingTarget,
     side: Side,
 ) -> Trade:
     """Calculate a trade."""
-    if side == Side.LONG:
-        target_high_pct = take_profit_pct
-        target_low_pct = stop_loss_pct
-    else:
-        target_high_pct = stop_loss_pct
-        target_low_pct = take_profit_pct
     position = open_position(
         open_date=candle.close_time,
         open_price=candle.close,
         money_to_invest=100,
         fees_pct=0.001,
         side=side,
-        take_profit=candle.close * (1 + target_high_pct),
-        stop_loss=candle.close * (1 - target_low_pct),
+        take_profit=target.high_value(candle.close),
+        stop_loss=target.low_value(candle.close),
     )
     return _close_long_position(position, fluctuations)
