@@ -7,18 +7,19 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.calculate_trade import (
+from ptahlmud.backtesting.exposition import Position, Trade, open_position
+from ptahlmud.backtesting.trades import (
     ExitSignal,
     TradingTarget,
     _get_lower_bound_index,
     _get_position_exit_signal,
     calculate_trade,
 )
-from ptahlmud.backtesting.exposition import Position, Side, Trade, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.period import Period
+from ptahlmud.types.signal import Side
 
 
 class GetLowerBoundIndexCases:

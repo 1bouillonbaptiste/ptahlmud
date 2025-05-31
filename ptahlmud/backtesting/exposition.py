@@ -1,11 +1,7 @@
 import datetime
-import enum
 from dataclasses import dataclass
 
-
-class Side(str, enum.Enum):
-    LONG = "LONG"
-    SHORT = "SHORT"
+from ptahlmud.types.signal import Side
 
 
 @dataclass
