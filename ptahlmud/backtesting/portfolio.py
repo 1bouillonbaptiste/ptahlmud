@@ -23,13 +23,13 @@ class WealthItem:
 
 
 class Portfolio:
-    """Represent the portfolio.
+    """Represent a trading portfolio.
 
     A portfolio is the volume of an asset and amount of currency detained.
 
     Note: the portfolio manages a single asset. To deal with multiple coins, you can wrap the items
     in a new `WealthSeries` (or whatever name) class that is assigned to an asset.
-    The current class would be responsible for updating the series corresponding of a traded asset.
+    The current class would be responsible for updating the series corresponding to a traded asset.
 
     Args:
         starting_date: date when the series begins

@@ -51,14 +51,14 @@ def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
 
     def _find_next_exit(remaining_signals: list[Signal], side: Side) -> Signal | None:
         """Find the first exit of the specified side."""
-        for signal in remaining_signals:
-            if signal.action != Action.EXIT:
+        for _signal in remaining_signals:
+            if _signal.action != Action.EXIT:
                 continue
-            if signal.side == side:
-                return signal
+            if _signal.side == side:
+                return _signal
         return None
 
-    signals = sorted(signals, key=lambda signal: signal.date)
+    signals = sorted(signals, key=lambda s: s.date)
     matches: list[MatchedSignal] = []
     for index, signal in enumerate(signals):
         if signal.action == Action.ENTER:
