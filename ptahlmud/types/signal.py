@@ -34,9 +34,11 @@ class Signal:
     """Represent a trading signal.
 
     Attributes:
-        side: The side of the signal
+        date: date of the signal
+        side: side of the signal
+        action: what action to take
     """
 
-    side: Side
     date: datetime.datetime
+    side: Side
     action: Action
