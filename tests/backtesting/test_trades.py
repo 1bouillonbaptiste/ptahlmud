@@ -153,6 +153,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         candle=entry_candle,
+        money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
         side=side,
@@ -181,6 +182,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         candle=entry_candle,
+        money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
         side=side,
@@ -199,6 +201,7 @@ def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: T
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         candle=entry_candle,
+        money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
         side=side,

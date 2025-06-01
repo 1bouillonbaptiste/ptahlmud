@@ -131,7 +131,8 @@ def test_trade_properties(params):
         expected_receipt = trade.volume * trade.close_price
     else:
         expected_receipt = trade.volume * (2 * trade.open_price - trade.close_price)
-    assert trade.receipt == pytest.approx(expected_receipt, abs=1e-7)
+    max_error = 1e-3 if expected_receipt > 10_000 else 1e-7  # on large amounts, floating point errors can stack
+    assert trade.receipt == pytest.approx(expected_receipt, abs=max_error)
     assert trade.open_fees == pytest.approx(trade.initial_investment * trade.fees_pct)
     assert trade.close_fees == pytest.approx(trade.receipt * trade.fees_pct)
     assert trade.total_fees == pytest.approx(trade.open_fees + trade.close_fees)

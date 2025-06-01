@@ -132,6 +132,7 @@ def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
 
 def calculate_trade(
     candle: Candle,
+    money_to_invest: float,
     fluctuations: Fluctuations,
     target: TradingTarget,
     side: Side,
@@ -140,7 +141,7 @@ def calculate_trade(
     position = open_position(
         open_date=candle.close_time,
         open_price=candle.close,
-        money_to_invest=100,
+        money_to_invest=money_to_invest,
         fees_pct=0.001,
         side=side,
         higher_barrier=target.high_value(candle.close),
