@@ -83,7 +83,7 @@ class WealthSeries:
         item_index = _find_date_position(date=date, date_collection=[item.date for item in self.items]) - 1
         return float(self.items[item_index].asset)
 
-    def _new_entry(self, date: datetime) -> None:
+    def new_entry(self, date: datetime) -> None:
         """Create a new timed entry in the series."""
         if date < self.items[0].date:
             raise ValueError("Cannot enter the market before the initial date.")
@@ -91,37 +91,21 @@ class WealthSeries:
         current_dates = [action.date for action in self.actions]
         self.actions.insert(_find_date_position(date, current_dates), new_action)
 
-    def _new_exit(self, date: datetime) -> None:
-        """Create a new timed exit in the series."""
-        new_action = TimedAction(date=date, action=Action.EXIT)
-        current_dates = [action.date for action in self.actions]
-        self.actions.insert(_find_date_position(date, current_dates), new_action)
-
-    def _update_wealth(self, date: datetime, investment: float, volume: float) -> None:
-        """Update the wealth series."""
+    def update_wealth(self, date: datetime, currency_difference: float, asset_difference: float) -> None:
+        """Increase the wealth from `date` by `currency_difference` and `asset_difference`."""
         before_item_index = _find_date_position(date, [item.date for item in self.items]) - 1
         before_item = self.items[before_item_index]
         new_item = WealthItem(
             date=date,
-            asset=before_item.asset + Decimal(str(volume)),
-            currency=before_item.currency - Decimal(str(investment)),
+            asset=before_item.asset + Decimal(str(asset_difference)),
+            currency=before_item.currency + Decimal(str(currency_difference)),
         )
 
         # if any following items, update them too
         for _item in self.items[before_item_index + 1 :]:
-            _item.add_currency(-investment)  # investing equals removing currency
-            _item.add_asset(volume)
+            _item.add_currency(currency_difference)
+            _item.add_asset(asset_difference)
         self.items.insert(before_item_index + 1, new_item)
-
-    def invest(self, date: datetime, investment: float, volume: float) -> None:
-        """Put money in the market, receive a certain volume of an asset."""
-        self._new_entry(date)
-        self._update_wealth(date, investment, volume)
-
-    def withdraw(self, date: datetime, withdraw: float, volume: float) -> None:
-        """Remove asset from the market, receive a certain amount of currency."""
-        self._new_exit(date)
-        self._update_wealth(date, -withdraw, -volume)
 
 
 def _find_date_position(date: datetime, date_collection: list[datetime]) -> int:
@@ -156,29 +140,29 @@ class Portfolio:
         ]
         self.wealth_series = WealthSeries(items=wealth_items, actions=[])
 
-    def _perform_entry(self, date: datetime, investment: float, volume: float) -> None:
-        """Enter the market if the portfolio wealth allows it."""
+    def _perform_entry(self, date: datetime, currency_amount: float, asset_volume: float) -> None:
+        """Enter the market by investing `currency_amount` to gain `asset_volume`."""
         if self.wealth_series.entries_after(date):
             raise ValueError("Cannot enter the market before an existing entry.")
 
-        if self.wealth_series.get_currency_at(date) < investment:
+        if self.wealth_series.get_currency_at(date) < currency_amount:
             raise ValueError("Not enough capital to enter the market.")
 
-        self.wealth_series.invest(date, investment, volume)
+        self.wealth_series.new_entry(date=date)
+        self.wealth_series.update_wealth(date=date, currency_difference=-currency_amount, asset_difference=asset_volume)
 
-    def _perform_exit(self, date: datetime, volume: float, withdraw: float) -> None:
-        """Exit from a position."""
-        if self.wealth_series.get_asset_at(date) < volume:
+    def _perform_exit(self, date: datetime, currency_amount: float, asset_volume: float) -> None:
+        """Exit the market by selling `volume` of an asset for `withdraw`."""
+        if self.wealth_series.get_asset_at(date) < asset_volume:
             raise ValueError("Cannot exit the market, asset volume too small.")
 
-        self.wealth_series.withdraw(date, withdraw, volume)
+        self.wealth_series.update_wealth(date=date, currency_difference=currency_amount, asset_difference=-asset_volume)
 
     def update_from_trade(self, trade: Trade) -> None:
         """Update the portfolio state with a new trade."""
-
-        self._perform_entry(trade.open_date, investment=trade.initial_investment, volume=trade.volume)
+        self._perform_entry(trade.open_date, currency_amount=trade.initial_investment, asset_volume=trade.volume)
         self._perform_exit(
-            trade.close_date, volume=trade.volume, withdraw=trade.total_profit + trade.initial_investment
+            trade.close_date, asset_volume=trade.volume, currency_amount=trade.total_profit + trade.initial_investment
         )
 
     def get_available_capital_at(self, date: datetime) -> float:
