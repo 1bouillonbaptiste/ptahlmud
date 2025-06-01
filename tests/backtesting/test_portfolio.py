@@ -5,8 +5,8 @@ import pytest
 from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.exposition import Trade, close_position, open_position
-from ptahlmud.backtesting.portfolio import Portfolio, TimedAction, WealthItem, WealthSeries
-from ptahlmud.types.signal import Action, Side
+from ptahlmud.backtesting.portfolio import Portfolio, WealthItem, WealthSeries
+from ptahlmud.types.signal import Side
 
 
 def test_wealth_series_update_wealth_after_date():
@@ -16,7 +16,7 @@ def test_wealth_series_update_wealth_after_date():
             WealthItem(date=datetime(2020, 1, 1), asset=Decimal(2), currency=Decimal(80)),
             WealthItem(date=datetime(2020, 1, 3), asset=Decimal(1), currency=Decimal(90)),
         ],
-        actions=[TimedAction(date=datetime(2020, 1, 3), action=Action.EXIT)],
+        entries=[],
     )
     wealth_series.update_wealth(date=datetime(2020, 1, 2), currency_difference=10, asset_difference=-1)
 

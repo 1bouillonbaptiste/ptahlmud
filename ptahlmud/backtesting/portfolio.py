@@ -10,7 +10,6 @@ from datetime import datetime
 from decimal import Decimal
 
 from ptahlmud.backtesting.exposition import Trade
-from ptahlmud.types.signal import Action
 
 
 @dataclass(slots=True)
@@ -41,14 +40,6 @@ class WealthItem:
         self.asset += Decimal(volume)
 
 
-@dataclass(slots=True)
-class TimedAction:
-    """An action that occurred at a specific time."""
-
-    date: datetime
-    action: Action
-
-
 @dataclass
 class WealthSeries:
     """Store the wealth of a portfolio over time.
@@ -57,21 +48,17 @@ class WealthSeries:
 
     Attributes:
         items: wealth time series values
-        actions: list of signals that have been applied to create the series
+        entries: dates when the portfolio entered the market as a list
     """
 
     items: list[WealthItem]
-    actions: list[TimedAction]
+    entries: list[datetime]
 
     def entries_after(self, date: datetime) -> bool:
         """Check if there are any entries after a given date."""
-        for _action in reversed(self.actions):
-            if _action.date < date:
-                # since signals are ordered, the following stored signals occurred before
-                return False
-            if _action.action == Action.ENTER:
-                return True
-        return False
+        if not self.entries:
+            return False
+        return date < self.entries[-1]
 
     def get_currency_at(self, date: datetime) -> float:
         """Return the money free to be invested."""
@@ -87,9 +74,7 @@ class WealthSeries:
         """Create a new timed entry in the series."""
         if date < self.items[0].date:
             raise ValueError("Cannot enter the market before the initial date.")
-        new_action = TimedAction(date=date, action=Action.ENTER)
-        current_dates = [action.date for action in self.actions]
-        self.actions.insert(_find_date_position(date, current_dates), new_action)
+        self.entries.insert(_find_date_position(date, self.entries), date)
 
     def update_wealth(self, date: datetime, currency_difference: float, asset_difference: float) -> None:
         """Increase the wealth from `date` by `currency_difference` and `asset_difference`."""
@@ -138,7 +123,7 @@ class Portfolio:
                 currency=Decimal(starting_currency),
             )
         ]
-        self.wealth_series = WealthSeries(items=wealth_items, actions=[])
+        self.wealth_series = WealthSeries(items=wealth_items, entries=[])
 
     def _perform_entry(self, date: datetime, currency_amount: float, asset_volume: float) -> None:
         """Enter the market by investing `currency_amount` to gain `asset_volume`."""
