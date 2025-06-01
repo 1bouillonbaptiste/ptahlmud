@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
+from ptahlmud.backtesting.exposition import Trade
 from ptahlmud.types.signal import Action
 
 
@@ -101,7 +102,9 @@ class WealthSeries:
         before_item_index = _find_date_position(date, [item.date for item in self.items]) - 1
         before_item = self.items[before_item_index]
         new_item = WealthItem(
-            date=date, asset=before_item.asset + Decimal(volume), currency=before_item.currency - Decimal(investment)
+            date=date,
+            asset=before_item.asset + Decimal(str(volume)),
+            currency=before_item.currency - Decimal(str(investment)),
         )
 
         # if any following items, update them too
@@ -169,6 +172,14 @@ class Portfolio:
             raise ValueError("Cannot exit the market, asset volume too small.")
 
         self.wealth_series.withdraw(date, withdraw, volume)
+
+    def update_from_trade(self, trade: Trade) -> None:
+        """Update the portfolio state with a new trade."""
+
+        self._perform_entry(trade.open_date, investment=trade.initial_investment, volume=trade.volume)
+        self._perform_exit(
+            trade.close_date, volume=trade.volume, withdraw=trade.total_profit + trade.initial_investment
+        )
 
     def get_available_capital_at(self, date: datetime) -> float:
         """Return the money free to be invested."""
