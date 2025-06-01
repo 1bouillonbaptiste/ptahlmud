@@ -123,18 +123,18 @@ class PortfolioUpdateFromTradeCases:
 
     def case_long_trade(self):
         fees_pct = 0.1
+        money_to_invest = 100
         position = open_position(
             open_date=datetime(2020, 1, 1),
             open_price=10,
-            money_to_invest=100,
+            money_to_invest=money_to_invest,
             fees_pct=fees_pct,  # take 10% from 100, volume is 9
             side=Side.LONG,
         )
         trade = close_position(position, close_date=datetime(2020, 1, 3), close_price=20)
-        selling_receipt = 9 * 20 * (1 - fees_pct)
         return trade, [
-            WealthItem(date=datetime(2020, 1, 1), asset=Decimal(9), currency=Decimal(100)),
-            WealthItem(date=datetime(2020, 1, 3), asset=Decimal(0), currency=Decimal(100 + selling_receipt)),
+            WealthItem(date=datetime(2020, 1, 1), asset=Decimal(9), currency=Decimal(200 - money_to_invest)),
+            WealthItem(date=datetime(2020, 1, 3), asset=Decimal(0), currency=Decimal(200 + trade.total_profit)),
         ]
 
     def case_short_trade(self):
@@ -147,10 +147,9 @@ class PortfolioUpdateFromTradeCases:
             side=Side.SHORT,
         )
         trade = close_position(position, close_date=datetime(2020, 1, 3), close_price=110)
-        selling_return = trade.total_profit + money_to_invest
         return trade, [
-            WealthItem(date=datetime(2020, 1, 1), asset=Decimal("0.9"), currency=Decimal(100)),
-            WealthItem(date=datetime(2020, 1, 3), asset=Decimal(0), currency=Decimal(100 + selling_return)),
+            WealthItem(date=datetime(2020, 1, 1), asset=Decimal("0.9"), currency=Decimal(200 - money_to_invest)),
+            WealthItem(date=datetime(2020, 1, 3), asset=Decimal(0), currency=Decimal(200 + trade.total_profit)),
         ]
 
 
