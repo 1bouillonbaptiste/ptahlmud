@@ -90,6 +90,12 @@ class WealthSeries:
         current_dates = [action.date for action in self.actions]
         self.actions.insert(_find_date_position(date, current_dates), new_action)
 
+    def _new_exit(self, date: datetime) -> None:
+        """Create a new timed exit in the series."""
+        new_action = TimedAction(date=date, action=Action.EXIT)
+        current_dates = [action.date for action in self.actions]
+        self.actions.insert(_find_date_position(date, current_dates), new_action)
+
     def _update_wealth(self, date: datetime, investment: float, volume: float) -> None:
         """Update the wealth series."""
         before_item_index = _find_date_position(date, [item.date for item in self.items]) - 1
@@ -108,6 +114,11 @@ class WealthSeries:
         """Put money in the market, receive a certain volume of an asset."""
         self._new_entry(date)
         self._update_wealth(date, investment, volume)
+
+    def withdraw(self, date: datetime, withdraw: float, volume: float) -> None:
+        """Remove asset from the market, receive a certain amount of currency."""
+        self._new_exit(date)
+        self._update_wealth(date, -withdraw, -volume)
 
 
 def _find_date_position(date: datetime, date_collection: list[datetime]) -> int:
@@ -151,6 +162,13 @@ class Portfolio:
             raise ValueError("Not enough capital to enter the market.")
 
         self.wealth_series.invest(date, investment, volume)
+
+    def _perform_exit(self, date: datetime, volume: float, withdraw: float) -> None:
+        """Exit from a position."""
+        if self.wealth_series.get_asset_at(date) < volume:
+            raise ValueError("Cannot exit the market, asset volume too small.")
+
+        self.wealth_series.withdraw(date, withdraw, volume)
 
     def get_available_capital_at(self, date: datetime) -> float:
         """Return the money free to be invested."""

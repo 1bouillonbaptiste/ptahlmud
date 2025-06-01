@@ -74,3 +74,36 @@ def test__perform_entry_fails_low_capital():
 
     with pytest.raises(ValueError, match="Not enough capital to enter the market."):
         portfolio._perform_entry(datetime(2020, 1, 1), 110, 1)
+
+
+def test__perform_exit():
+    portfolio = Portfolio(starting_date=datetime(2020, 1, 1), starting_asset=1, starting_currency=0)
+
+    assert portfolio.get_available_capital_at(datetime(2020, 1, 1)) == 0
+    assert portfolio.get_asset_volume_at(datetime(2020, 1, 1)) == 1
+
+    portfolio._perform_exit(datetime(2020, 1, 2), volume=1, withdraw=10)
+    assert portfolio.get_available_capital_at(datetime(2020, 1, 2)) == 10
+    assert portfolio.get_asset_volume_at(datetime(2020, 1, 2)) == 0
+
+
+def test__perform_exit_updates_following_exit():
+    """Check that the following exit is updated."""
+    portfolio = Portfolio(starting_date=datetime(2020, 1, 1), starting_asset=2, starting_currency=0)
+
+    portfolio._perform_exit(datetime(2020, 1, 3), volume=1, withdraw=10)
+    assert portfolio.get_available_capital_at(datetime(2020, 1, 3)) == 10
+    assert portfolio.get_asset_volume_at(datetime(2020, 1, 3)) == 1
+
+    portfolio._perform_exit(datetime(2020, 1, 2), volume=1, withdraw=10)
+
+    # check the previous exit state
+    assert portfolio.get_available_capital_at(datetime(2020, 1, 3)) == 20
+    assert portfolio.get_asset_volume_at(datetime(2020, 1, 3)) == 0
+
+
+def test__perform_exit_fails_on_volume():
+    portfolio = Portfolio(starting_date=datetime(2020, 1, 1), starting_asset=1, starting_currency=0)
+
+    with pytest.raises(ValueError, match="Cannot exit the market, asset volume too small."):
+        portfolio._perform_exit(datetime(2020, 1, 2), volume=2, withdraw=20)
