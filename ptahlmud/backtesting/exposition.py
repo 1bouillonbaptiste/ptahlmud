@@ -91,16 +91,6 @@ class Trade(Position):
         """A trade is always closed."""
         return True
 
-    @property
-    def reached_higher_barrier(self) -> bool:
-        """Whether the trade reached the take profit."""
-        return self.close_price >= self.higher_barrier
-
-    @property
-    def reached_lower_barrier(self) -> bool:
-        """Whether the trade reached the stop loss."""
-        return self.close_price <= self.lower_barrier
-
 
 def _calculate_fees(investment: float, fees_pct: float) -> float:
     """The cost to open a position."""

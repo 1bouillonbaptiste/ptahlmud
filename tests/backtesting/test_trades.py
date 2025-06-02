@@ -165,12 +165,11 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
     assert trade.higher_barrier == pytest.approx(higher_barrier)
     assert trade.lower_barrier == pytest.approx(lower_barrier)
 
-    candles_during_trade = fluctuations.subset(from_date=trade.open_date, to_date=trade.close_date).candles
-    if not trade.reached_higher_barrier:
-        assert all(candle.high < higher_barrier for candle in candles_during_trade)
+    # if trade reached target, the last candle contains high > higher target and / or low < lower target
+    candles_during_trade = fluctuations.subset(from_date=trade.open_date, to_date=trade.close_date).candles[:-1]
 
-    if not trade.reached_lower_barrier:
-        assert all(candle.low > lower_barrier for candle in candles_during_trade)
+    assert all(candle.high < higher_barrier for candle in candles_during_trade)
+    assert all(candle.low > lower_barrier for candle in candles_during_trade)
 
 
 @given(
