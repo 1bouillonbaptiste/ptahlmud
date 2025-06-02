@@ -152,7 +152,7 @@ def some_target(draw):
 def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: TradingTarget, side: Side):
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
-        candle=entry_candle,
+        open_at=entry_candle.close_time,
         money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
@@ -181,7 +181,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
 def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target: TradingTarget, side: Side):
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
-        candle=entry_candle,
+        open_at=entry_candle.close_time,
         money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
@@ -200,7 +200,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
 def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: TradingTarget, side: Side):
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
-        candle=entry_candle,
+        open_at=entry_candle.close_time,
         money_to_invest=100,
         fluctuations=fluctuations,
         target=target,

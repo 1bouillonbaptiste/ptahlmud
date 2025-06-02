@@ -22,6 +22,11 @@ class Fluctuations:
         """Number of candles in the collection."""
         return len(self.candles)
 
+    def get_candle_at(self, date: datetime) -> Candle:
+        """Return the candle containing `date`."""
+        index = _get_lower_bound_index(date=date, candles=self.candles)
+        return self.candles[index]
+
     def subset(self, from_date: datetime | None = None, to_date: datetime | None = None) -> "Fluctuations":
         """Return a subset of object candles."""
         if (from_date is None) and (to_date is None):

@@ -107,7 +107,7 @@ def process_signals(
 
         fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date)
         new_trade = calculate_trade(
-            candle=fluctuations_subset.candles[0],
+            open_at=match.entry.date,
             money_to_invest=available_capital * risk_config.size,
             fluctuations=fluctuations_subset,
             target=_create_target(match=match, risk_config=risk_config),
