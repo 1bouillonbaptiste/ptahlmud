@@ -7,62 +7,18 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.calculate_trade import (
+from ptahlmud.backtesting.exposition import Position, Trade, open_position
+from ptahlmud.backtesting.trades import (
     ExitSignal,
     TradingTarget,
-    _get_lower_bound_index,
     _get_position_exit_signal,
     calculate_trade,
 )
-from ptahlmud.backtesting.exposition import Position, Side, Trade, open_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.period import Period
-
-
-class GetLowerBoundIndexCases:
-    """Generate cases for `_get_lower_bound_index`.
-
-    Each case returns:
-    - a date
-    - candle to find the lower-bound index in
-    - the expected_index
-    """
-
-    def case_date_before_candles(self):
-        return datetime(2023, 1, 1), generate_candles(size=10, from_date=datetime(2023, 1, 2)), 0
-
-    def case_date_after_candles(self):
-        return datetime(2024, 1, 1), generate_candles(size=10, from_date=datetime(2023, 1, 2)), 10
-
-    def case_date_is_first_candle_close(self):
-        return (
-            datetime(2023, 1, 1, 1),
-            generate_candles(size=10, period=Period(timeframe="1h"), from_date=datetime(2023, 1, 1)),
-            1,
-        )
-
-    def case_date_is_last_candle_open(self):
-        return (
-            datetime(2023, 1, 1, 9),
-            generate_candles(size=10, period=Period(timeframe="1h"), from_date=datetime(2023, 1, 1)),
-            9,
-        )
-
-    def case_date_in_the_middle(self):
-        """3 nested iterations, 5 + 2 + 0."""
-        return (
-            datetime(2023, 1, 1, 7),
-            generate_candles(size=10, period=Period(timeframe="1h"), from_date=datetime(2023, 1, 1)),
-            7,
-        )
-
-
-@parametrize_with_cases("date, candles, expected_index", cases=GetLowerBoundIndexCases)
-def test__get_lower_bound_index(date: datetime, candles: list[Candle], expected_index: int):
-    index = _get_lower_bound_index(date, candles)
-    assert index == expected_index
+from ptahlmud.types.signal import Side
 
 
 @pytest.fixture
@@ -197,6 +153,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         candle=entry_candle,
+        money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
         side=side,
@@ -208,8 +165,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
     assert trade.higher_barrier == pytest.approx(higher_barrier)
     assert trade.lower_barrier == pytest.approx(lower_barrier)
 
-    index_closing_candle = _get_lower_bound_index(date=trade.close_date, candles=fluctuations.candles)
-    candles_during_trade = fluctuations.candles[1:index_closing_candle]  # Skip entry candle
+    candles_during_trade = fluctuations.subset(from_date=trade.open_date, to_date=trade.close_date).candles
     if not trade.reached_higher_barrier:
         assert all(candle.high < higher_barrier for candle in candles_during_trade)
 
@@ -226,6 +182,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         candle=entry_candle,
+        money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
         side=side,
@@ -244,6 +201,7 @@ def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: T
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         candle=entry_candle,
+        money_to_invest=100,
         fluctuations=fluctuations,
         target=target,
         side=side,

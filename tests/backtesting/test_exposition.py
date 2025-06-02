@@ -7,7 +7,8 @@ from hypothesis import given
 from hypothesis import strategies as some
 from hypothesis.strategies import composite
 
-from ptahlmud.backtesting.exposition import Position, Side, close_position, open_position
+from ptahlmud.backtesting.exposition import Position, close_position, open_position
+from ptahlmud.types.signal import Side
 
 
 @pytest.fixture
@@ -31,8 +32,9 @@ def test_open_position(fake_position):
 def test_close_position(fake_position):
     trade = close_position(position=fake_position, close_date=datetime(2024, 8, 25), close_price=125)
 
-    assert trade.close_fees == 125 * fake_position.volume * 0.001
-    assert trade.total_fees == 125 * fake_position.volume * 0.001 + fake_position.open_fees
+    expected_close_fees = 125 * fake_position.volume * 0.001
+    assert trade.close_fees == pytest.approx(expected_close_fees)
+    assert trade.total_fees == pytest.approx(expected_close_fees + fake_position.open_fees)
     assert trade.total_profit == pytest.approx(fake_position.volume * 125 - 50 - trade.close_fees)
     assert trade.total_duration == timedelta(days=5)
 
@@ -125,7 +127,13 @@ def test_trade_properties(params):
     assert trade.total_duration == (trade.close_date - trade.open_date)
 
     # financial calculations
-    assert trade.receipt == pytest.approx(trade.volume * trade.close_price)
+    if trade.side == Side.LONG:
+        expected_receipt = trade.volume * trade.close_price
+    else:
+        expected_receipt = trade.volume * (2 * trade.open_price - trade.close_price)
+    max_error = 1e-3 if expected_receipt > 10_000 else 1e-7  # on large amounts, floating point errors can stack
+    assert trade.receipt == pytest.approx(expected_receipt, abs=max_error)
+    assert trade.open_fees == pytest.approx(trade.initial_investment * trade.fees_pct)
     assert trade.close_fees == pytest.approx(trade.receipt * trade.fees_pct)
     assert trade.total_fees == pytest.approx(trade.open_fees + trade.close_fees)
 

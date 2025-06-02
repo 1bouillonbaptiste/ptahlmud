@@ -1,11 +1,7 @@
 import datetime
-import enum
 from dataclasses import dataclass
 
-
-class Side(str, enum.Enum):
-    LONG = "LONG"
-    SHORT = "SHORT"
+from ptahlmud.types.signal import Side
 
 
 @dataclass
@@ -63,7 +59,13 @@ class Trade(Position):
 
     @property
     def receipt(self) -> float:
-        return self.volume * self.close_price
+        """The amount of money received after closing the trade."""
+        if self.side == Side.LONG:
+            price_diff = self.close_price - self.open_price
+        else:
+            price_diff = self.open_price - self.close_price
+
+        return self.volume * price_diff + self.initial_investment - self.open_fees
 
     @property
     def close_fees(self) -> float:
@@ -72,10 +74,7 @@ class Trade(Position):
     @property
     def total_profit(self) -> float:
         """Overall profit of the trade."""
-        trade_return = self.receipt - self.initial_investment + self.open_fees
-        if self.side == Side.SHORT:
-            trade_return *= -1
-        return trade_return - self.total_fees
+        return self.receipt - self.initial_investment - self.close_fees
 
     @property
     def total_fees(self) -> float:
