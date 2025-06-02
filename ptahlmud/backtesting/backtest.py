@@ -1,20 +1,17 @@
 """Backtesting processing module.
 
-This module is responsible to process trading orders given by strategies.
-
-# TODO: create Portfolio to manage an asset and capital during the backtest
-#       it must implement .get(size: CapitalSize) and .update(trade:Trade)
-# TODO: create CapitalSize which is a volume or a percentage of available capital for trading
-# TODO: match entry and exit Signal into a MatchedSignal
-# TODO :calculate a trade from a matched signal
+This module is responsible for processing trading orders given by strategies.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
 
 from pydantic import BaseModel
 
 from ptahlmud.backtesting.exposition import Trade
+from ptahlmud.backtesting.portfolio import Portfolio
+from ptahlmud.backtesting.trades import TradingTarget, calculate_trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.signal import Action, Side, Signal
 
@@ -22,13 +19,15 @@ from ptahlmud.types.signal import Action, Side, Signal
 class RiskConfig(BaseModel):
     """Define risk configuration.
 
-    # TODO: find a name for higher and lower barriers
-
     Attributes:
-        size: capital to gamble at each trade
+        size: fraction of available capital to use for trading
+        take_profit: close the position when the profit reaches this value
+        stop_loss: close the position when the loss reaches this value
     """
 
-    size: Any
+    size: float
+    take_profit: float
+    stop_loss: float
 
 
 @dataclass
@@ -41,6 +40,13 @@ class MatchedSignal:
 
     entry: Signal
     exit: Signal | None
+
+    @property
+    def exit_date(self) -> datetime | None:
+        """Return the date of the exit signal."""
+        if self.exit is None:
+            return None
+        return self.exit.date
 
 
 def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
@@ -67,6 +73,38 @@ def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
     return matches
 
 
-def _process_signals(signals: list[Signal], risk_config: RiskConfig, fluctuations: Fluctuations) -> list[Trade]:
+def process_signals(
+    signals: list[Signal],
+    risk_config: RiskConfig,
+    fluctuations: Fluctuations,
+    initial_portfolio: Portfolio,
+) -> tuple[list[Trade], Portfolio]:
     """Simulate the market from user-defined trading signals."""
-    return []
+    portfolio = deepcopy(initial_portfolio)
+    trades: list[Trade] = []
+    matches = _match_signals(signals)
+    if not matches:
+        return trades, portfolio
+
+    if matches[-1].entry.date >= fluctuations.candles[-1].open_time:
+        raise ValueError("Cannot enter trade after the last candle.")
+
+    for match in matches:
+        fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date)
+        target = TradingTarget(
+            high=risk_config.take_profit if match.entry.side == Side.LONG else risk_config.stop_loss,
+            low=risk_config.stop_loss if match.entry.side == Side.LONG else min(risk_config.take_profit, 0.999),
+        )
+        money_to_invest = risk_config.size * portfolio.get_available_capital_at(match.entry.date)
+        if money_to_invest == 0:
+            continue
+        new_trade = calculate_trade(
+            candle=fluctuations_subset.candles[0],
+            money_to_invest=money_to_invest,
+            fluctuations=fluctuations_subset,
+            target=target,
+            side=match.entry.side,
+        )
+        trades.append(new_trade)
+        portfolio.update_from_trade(new_trade)
+    return trades, portfolio

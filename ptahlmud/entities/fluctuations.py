@@ -33,7 +33,7 @@ class Fluctuations:
         from_index = _get_lower_bound_index(date=from_date, candles=self.candles)
         to_index = _get_lower_bound_index(date=to_date, candles=self.candles) + 1
         candles = self.candles[from_index:to_index]
-        if candles[-1].open_time == to_date:
+        if candles and (candles[-1].open_time == to_date):
             candles.pop()
         return Fluctuations(
             candles=candles,
