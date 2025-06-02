@@ -44,7 +44,7 @@ def generate_candles(
 
     initial_close: float = 1000
     closes = np.cumprod(1 + candles_returns) * initial_close
-    opens = [initial_close, *closes[:-1].tolist()]
+    opens = np.array([initial_close, *closes[:-1].tolist()])
     highs = (1 + high_diffs) * np.max([closes, opens], axis=0)
     lows = (1 - low_diffs) * np.min([closes, opens], axis=0)
     volumes = (np.random.beta(a=2, b=2, size=size) / 2 + 0.25) * 1000
