@@ -73,6 +73,20 @@ def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
     return matches
 
 
+def _create_target(match: MatchedSignal, risk_config: RiskConfig) -> TradingTarget:
+    """Create an instance of `TradingTarget`."""
+    if match.entry.side == Side.LONG:
+        return TradingTarget(
+            high=risk_config.take_profit,
+            low=risk_config.stop_loss,
+        )
+    else:
+        return TradingTarget(
+            high=risk_config.stop_loss,
+            low=min(risk_config.take_profit, 0.999),  # the maximum profit is 100% if the price goes at 0
+        )
+
+
 def process_signals(
     signals: list[Signal],
     risk_config: RiskConfig,
@@ -81,28 +95,22 @@ def process_signals(
 ) -> tuple[list[Trade], Portfolio]:
     """Simulate the market from user-defined trading signals."""
     portfolio = deepcopy(initial_portfolio)
+    fluctuations_end_time = fluctuations.candles[-1].open_time
     trades: list[Trade] = []
-    matches = _match_signals(signals)
-    if not matches:
-        return trades, portfolio
-
-    if matches[-1].entry.date >= fluctuations.candles[-1].open_time:
-        raise ValueError("Cannot enter trade after the last candle.")
-
-    for match in matches:
-        fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date)
-        target = TradingTarget(
-            high=risk_config.take_profit if match.entry.side == Side.LONG else risk_config.stop_loss,
-            low=risk_config.stop_loss if match.entry.side == Side.LONG else min(risk_config.take_profit, 0.999),
-        )
-        money_to_invest = risk_config.size * portfolio.get_available_capital_at(match.entry.date)
-        if money_to_invest == 0:
+    for match in _match_signals(signals):
+        available_capital = portfolio.get_available_capital_at(match.entry.date)
+        if available_capital == 0:
             continue
+
+        if match.entry.date >= fluctuations_end_time:
+            continue
+
+        fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date)
         new_trade = calculate_trade(
             candle=fluctuations_subset.candles[0],
-            money_to_invest=money_to_invest,
+            money_to_invest=available_capital * risk_config.size,
             fluctuations=fluctuations_subset,
-            target=target,
+            target=_create_target(match=match, risk_config=risk_config),
             side=match.entry.side,
         )
         trades.append(new_trade)
