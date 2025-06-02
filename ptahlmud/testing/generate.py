@@ -37,26 +37,35 @@ def generate_candles(
         last_close_time = initial_open_time + period.to_timedelta() * size
 
     size = int((last_close_time - initial_open_time) / period.to_timedelta())
-    close_price: float = 1000
-    candles = []
-    for ii in range(size):
-        open_price = close_price
-        close_price = open_price * (1 + np.random.normal(scale=0.01))
-        high_price = np.max([open_price, close_price]) * (1 + np.random.beta(a=2, b=5) / 100)
-        low_price = np.min([open_price, close_price]) * (1 - np.random.beta(a=2, b=5) / 100)
-        volume = (np.random.beta(a=2, b=2) / 2 + 0.25) * 1000
-        candles.append(
-            Candle(
-                open=round(float(open_price), 3),
-                high=round(float(high_price), 3),
-                low=round(float(low_price), 3),
-                close=round(float(close_price), 3),
-                volume=round(float(volume), 3),
-                total_trades=1,
-                open_time=initial_open_time + ii * period.to_timedelta(),
-                close_time=initial_open_time + (ii + 1) * period.to_timedelta(),
-                high_time=None,
-                low_time=None,
-            )
+
+    candles_returns = np.random.normal(scale=0.01, size=size)
+    high_diffs = np.random.beta(a=2, b=5, size=size) / 100
+    low_diffs = np.random.beta(a=2, b=5, size=size) / 100
+
+    initial_close: float = 1000
+    closes = np.cumprod(1 + candles_returns) * initial_close
+    opens = [initial_close, *closes[:-1].tolist()]
+    highs = (1 + high_diffs) * np.max([closes, opens], axis=0)
+    lows = (1 - low_diffs) * np.min([closes, opens], axis=0)
+    volumes = (np.random.beta(a=2, b=2, size=size) / 2 + 0.25) * 1000
+    open_dates = [initial_open_time + ii * period.to_timedelta() for ii in range(size)]
+    close_dates = [open_date + period.to_timedelta() for open_date in open_dates]
+
+    candles: list[Candle] = [
+        Candle(
+            open=round(float(open_price), 3),
+            high=round(float(high_price), 3),
+            low=round(float(low_price), 3),
+            close=round(float(close_price), 3),
+            volume=round(float(volume), 3),
+            total_trades=1,
+            open_time=open_time,
+            close_time=close_time,
+            high_time=None,
+            low_time=None,
         )
+        for open_price, high_price, low_price, close_price, volume, open_time, close_time in zip(
+            opens, highs, lows, closes, volumes, open_dates, close_dates, strict=False
+        )
+    ]
     return candles
