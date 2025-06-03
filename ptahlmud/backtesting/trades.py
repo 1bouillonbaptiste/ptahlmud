@@ -108,20 +108,38 @@ def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
 
 
 def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
-    """Simulate the trade resulting from the position and market data."""
+    """Simulate the trade resulting from the position and market data.
+
+    The position is monitored candle by candle until:
+    1. A barrier (take profit/stop loss) is hit, OR
+    2. The market data ends (forced close at the last available price)
+
+    Args:
+        position: the open position to simulate
+        fluctuations: market data
+
+    Returns:
+        the closed position as a new `Trade` instance
+
+    Raises:
+        ValueError: if the position opens after all available market data
+    """
     fluctuations_subset = fluctuations.subset(from_date=position.open_date)
+
     if fluctuations_subset.size == 0:
-        raise ValueError("Position opened after fluctuations end.")
+        raise ValueError(
+            f"Position opened at {position.open_date} but market data ends before that date. "
+            f"Latest available data: {fluctuations.candles[-1].close_time}"
+        )
+
     for candle in fluctuations_subset.candles:
         signal = _get_position_exit_signal(position=position, candle=candle)
-        if signal.hold_position:
-            continue
-        close_price, close_date = signal.to_price_date(position=position, candle=candle)
-        return position.close(
-            close_date=close_date,
-            close_price=close_price,
-        )
-    last_candle = fluctuations.candles[-1]
+
+        if not signal.hold_position:
+            close_price, close_date = signal.to_price_date(position=position, candle=candle)
+            return position.close(close_date=close_date, close_price=close_price)
+
+    last_candle = fluctuations_subset.candles[-1]
     return position.close(
         close_date=last_candle.close_time,
         close_price=last_candle.close,
