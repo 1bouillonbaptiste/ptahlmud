@@ -4,6 +4,11 @@ from datetime import datetime, timedelta
 from ptahlmud.types.signal import Side
 
 
+def _calculate_fees(investment: float, fees_pct: float) -> float:
+    """The cost to open a position."""
+    return investment * fees_pct
+
+
 @dataclass
 class Position:
     """Represent a position on the market.
@@ -130,8 +135,3 @@ class Trade(Position):
     def is_closed(self) -> bool:
         """A trade is always closed."""
         return True
-
-
-def _calculate_fees(investment: float, fees_pct: float) -> float:
-    """The cost to open a position."""
-    return investment * fees_pct
