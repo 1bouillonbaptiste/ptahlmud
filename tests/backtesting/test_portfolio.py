@@ -4,8 +4,8 @@ from decimal import Decimal
 import pytest
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Trade, close_position, open_position
 from ptahlmud.backtesting.portfolio import Portfolio, WealthItem, WealthSeries
+from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.types.signal import Side
 
 
@@ -124,14 +124,14 @@ class PortfolioUpdateFromTradeCases:
     def case_long_trade(self):
         fees_pct = 0.1
         money_to_invest = 100
-        position = open_position(
+        position = Position.open(
             open_date=datetime(2020, 1, 1),
             open_price=10,
             money_to_invest=money_to_invest,
             fees_pct=fees_pct,  # take 10% from 100, volume is 9
             side=Side.LONG,
         )
-        trade = close_position(position, close_date=datetime(2020, 1, 3), close_price=20)
+        trade = position.close(close_date=datetime(2020, 1, 3), close_price=20)
         return trade, [
             WealthItem(date=datetime(2020, 1, 1), asset=Decimal(9), currency=Decimal(200 - money_to_invest)),
             WealthItem(date=datetime(2020, 1, 3), asset=Decimal(0), currency=Decimal(200 + trade.total_profit)),
@@ -139,14 +139,14 @@ class PortfolioUpdateFromTradeCases:
 
     def case_short_trade(self):
         money_to_invest = 100
-        position = open_position(
+        position = Position.open(
             open_date=datetime(2020, 1, 1),
             open_price=100,
             money_to_invest=money_to_invest,
             fees_pct=0.1,  # take 10% from 100, volume is 0.9
             side=Side.SHORT,
         )
-        trade = close_position(position, close_date=datetime(2020, 1, 3), close_price=110)
+        trade = position.close(close_date=datetime(2020, 1, 3), close_price=110)
         return trade, [
             WealthItem(date=datetime(2020, 1, 1), asset=Decimal("0.9"), currency=Decimal(200 - money_to_invest)),
             WealthItem(date=datetime(2020, 1, 3), asset=Decimal(0), currency=Decimal(200 + trade.total_profit)),

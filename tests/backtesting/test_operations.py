@@ -7,13 +7,13 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Position, Trade, open_position
-from ptahlmud.backtesting.trades import (
-    ExitSignal,
-    TradingTarget,
+from ptahlmud.backtesting.models.barriers import BarrierLevels
+from ptahlmud.backtesting.models.exit_signal import ExitSignal
+from ptahlmud.backtesting.operations import (
     _get_position_exit_signal,
     calculate_trade,
 )
+from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
@@ -23,7 +23,7 @@ from ptahlmud.types.signal import Side
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(
+    return Position.open(
         open_date=datetime(2024, 8, 20),
         open_price=100,
         money_to_invest=50,
@@ -141,7 +141,7 @@ def some_fluctuations(draw) -> Fluctuations:
 def some_target(draw):
     higher_target = draw(some.floats(min_value=0.001, max_value=100))
     lower_target = draw(some.floats(min_value=0.001, max_value=0.999))
-    return TradingTarget(high=higher_target, low=lower_target)
+    return BarrierLevels(high=higher_target, low=lower_target)
 
 
 @given(
@@ -149,7 +149,7 @@ def some_target(draw):
     some_target(),
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
-def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: TradingTarget, side: Side):
+def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
@@ -177,7 +177,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: T
     some_target(),
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
-def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target: TradingTarget, side: Side):
+def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
@@ -196,7 +196,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
     some_target(),
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
-def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: TradingTarget, side: Side):
+def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
