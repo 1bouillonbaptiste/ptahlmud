@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from ptahlmud.backtesting.trading import Trade
+from ptahlmud.backtesting.position import Trade
 
 
 @dataclass(slots=True)

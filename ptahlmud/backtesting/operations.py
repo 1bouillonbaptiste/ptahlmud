@@ -2,7 +2,7 @@ from datetime import datetime
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.exit_signal import ExitSignal
-from ptahlmud.backtesting.trading import Position, Trade
+from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side

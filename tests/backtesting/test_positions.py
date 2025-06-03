@@ -7,7 +7,7 @@ from hypothesis import given
 from hypothesis import strategies as some
 from hypothesis.strategies import composite
 
-from ptahlmud.backtesting.trading import Position
+from ptahlmud.backtesting.position import Position
 from ptahlmud.types.signal import Side
 
 

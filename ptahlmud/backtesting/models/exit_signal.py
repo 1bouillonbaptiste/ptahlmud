@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from ptahlmud.backtesting.trading import Position
+from ptahlmud.backtesting.position import Position
 from ptahlmud.types.candle import Candle
 
 

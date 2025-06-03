@@ -9,11 +9,11 @@ from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.exit_signal import ExitSignal
-from ptahlmud.backtesting.trades import (
+from ptahlmud.backtesting.operations import (
     _get_position_exit_signal,
     calculate_trade,
 )
-from ptahlmud.backtesting.trading import Position, Trade
+from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
