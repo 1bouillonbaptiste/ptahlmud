@@ -1,6 +1,15 @@
-"""Backtesting processing module.
+"""Process trading signals for backtesting.
 
-This module is responsible for processing trading orders given by strategies.
+This module converts trading signals into executed trades by simulating
+market interactions according to risk management rules. It handles:
+
+1. Signal matching (pairing entry and exit signals)
+2. Risk management (position sizing, take-profit and stop-loss levels)
+3. Trade simulation (calculating exact entry/exit points and results)
+4. Portfolio tracking (recording changes in capital and asset holdings)
+
+The core functionality is encapsulated in `process_signals()`, which transforms
+a sequence of raw trading signals into a list of executed trades and an updated portfolio.
 """
 
 from copy import deepcopy
@@ -17,12 +26,15 @@ from ptahlmud.types.signal import Action, Side, Signal
 
 
 class RiskConfig(BaseModel):
-    """Define risk configuration.
+    """Define risk management parameters for trading.
+
+    Risk management is crucial for protecting trading capital. This configuration
+    determines how much capital to risk per trade and when to exit positions.
 
     Attributes:
-        size: fraction of available capital to use for trading
-        take_profit: close the position when the profit reaches this value
-        stop_loss: close the position when the loss reaches this value
+        size: the fraction of available capital to allocate to each trade
+        take_profit: the price increase percentage that triggers profit-taking
+        stop_loss: the price decrease percentage that triggers loss-cutting
     """
 
     size: float
@@ -32,10 +44,15 @@ class RiskConfig(BaseModel):
 
 @dataclass
 class MatchedSignal:
-    """Represent two associated signals.
+    """Pair entry and exit signals for a complete trading operation.
 
-    An entry can be associated with an exit if it is known, the exit is the latest date until a position is hold.
-    Sometimes, a trader enters the market without knowing when to exit.
+    A matched signal represents the full lifecycle of a potential trade, from
+    market entry to exit. The exit may be predetermined or determined during
+    the trading process based on price action.
+
+    Attributes:
+        entry: the signal indicating when to enter the market and in which direction
+        exit: the signal indicating when to exit, it can be None if there is no trading time limit
     """
 
     entry: Signal
@@ -50,9 +67,16 @@ class MatchedSignal:
 
 
 def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
-    """Group entries to exits.
+    """Group entry signals with their corresponding exit signals.
 
-    An exit closes every previous entry, exits count doesn't need to match entries count.
+    This function pairs ENTER signals with the next EXIT signal of the matching side.
+    One EXIT signal can close multiple ENTER signals of the same side.
+
+    Args:
+        signals: A list of trading signals (ENTER, EXIT, HOLD) to be matched
+
+    Returns:
+        A list of matched signals, each containing an entry and possibly an exit
     """
 
     def _find_next_exit(remaining_signals: list[Signal], side: Side) -> Signal | None:
@@ -74,7 +98,8 @@ def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
 
 
 def _create_target(match: MatchedSignal, risk_config: RiskConfig) -> BarrierLevels:
-    """Create an instance of `TradingTarget`."""
+    """Create price barriers for a trade based on risk settings and trade direction."""
+
     if match.entry.side == Side.LONG:
         return BarrierLevels(
             high=risk_config.take_profit,
@@ -93,7 +118,18 @@ def process_signals(
     fluctuations: Fluctuations,
     initial_portfolio: Portfolio,
 ) -> tuple[list[Trade], Portfolio]:
-    """Simulate the market from user-defined trading signals."""
+    """Process trading signals to generate trades and track portfolio changes.
+
+    Args:
+        signals: trading signals
+        risk_config: risk management parameters
+        fluctuations: market data
+        initial_portfolio: portfolio starting state
+
+    Returns:
+        executed trades as a list
+        the portfolio after trading session
+    """
     portfolio = deepcopy(initial_portfolio)
     fluctuations_end_time = fluctuations.candles[-1].open_time
     trades: list[Trade] = []

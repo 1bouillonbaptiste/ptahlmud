@@ -10,11 +10,9 @@ from pydantic import BaseModel, Field
 class BarrierLevels(BaseModel):
     """Represents trading barriers.
 
-
-
     Attributes:
-        high: higher barrier, defaults to inf or "never sell"
-        low: lower barrier, default to 1 or "never sell"
+        high: higher barrier, defaults to inf (a.k.a. "never sell")
+        low: lower barrier, default to 1 (a.k.a. "never sell")
     """
 
     high: float = Field(gt=0, lt=float("inf"))

@@ -1,3 +1,14 @@
+"""Define trading entities for backtesting.
+
+This module contains the `Position` and `Trade` classes, which are essential
+components for simulating trades in a backtesting environment.
+
+- A `Position` represents the active market exposure held by a trader, with attributes
+  such as open price, barriers for take profit or stop loss, and the initial amount invested.
+- A `Trade` extends `Position` and represents a completed trade, including the closing
+  information (e.g., closing date, closing price, fees, and profit).
+"""
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -11,10 +22,11 @@ def _calculate_fees(investment: float, fees_pct: float) -> float:
 
 @dataclass
 class Position:
-    """Represent a position on the market.
+    """Represent an open position.
 
-    A position is the expression of a market commitment, or exposure, held by a trader.
-    When the position is closed, it becomes a trade.
+    A `Position` is the expression of a trader's market commitment. It contains details about
+    the side (LONG/SHORT), investment size, barriers for exit, and associated fees. When the
+    position is closed, it converts into a `Trade`.
 
     Attributes:
         side: the side of the position
@@ -40,6 +52,7 @@ class Position:
 
     @property
     def open_fees(self) -> float:
+        """Fees incurred at the moment of opening the position."""
         return _calculate_fees(investment=self.initial_investment, fees_pct=self.fees_pct)
 
     @property
@@ -73,7 +86,7 @@ class Position:
         )
 
     def close(self, close_date: datetime, close_price: float) -> "Trade":
-        """Close the trading position."""
+        """Close an open position and convert it to a `Trade`."""
         if self.is_closed:
             raise ValueError("Position il already closed.")
         return Trade(
@@ -85,9 +98,11 @@ class Position:
 
 @dataclass
 class Trade(Position):
-    """Represent a trade.
+    """Represent a completed trade.
 
-    A Trade is-a position that has been closed.
+    A `Trade` is an extension of a `Position` that has been closed. It includes
+    details about when and at what price the trade was completed, as well as
+    calculated financial metrics such as profit and fees.
 
     Attributes:
         close_date: the date when a position was closed, could be any time
@@ -109,29 +124,35 @@ class Trade(Position):
 
     @classmethod
     def open(cls, *args, **kwargs) -> None:
-        """Cannot open a trade."""
+        """Prevent opening trades directly.
+
+        A `Trade` _must_ be created by closing a `Position`.
+        """
+
         raise RuntimeError("Cannot open a trade, please use `Position.open()` instead.")
 
     @property
     def close_fees(self) -> float:
+        """Fees incurred at the moment of closing the trade."""
+
         return _calculate_fees(investment=self.receipt, fees_pct=self.fees_pct)
 
     @property
     def total_profit(self) -> float:
-        """Overall profit of the trade."""
+        """The overall profit or loss from the trade."""
         return self.receipt - self.initial_investment - self.close_fees
 
     @property
     def total_fees(self) -> float:
-        """Overall cost of the trade."""
+        """The total fees incurred during the trade."""
         return self.open_fees + self.close_fees
 
     @property
     def total_duration(self) -> timedelta:
-        """Overall duration of the trade."""
+        """The duration for which the trade remained open."""
         return self.close_date - self.open_date
 
     @property
     def is_closed(self) -> bool:
-        """A trade is always closed."""
+        """A trade is always a closed position."""
         return True
