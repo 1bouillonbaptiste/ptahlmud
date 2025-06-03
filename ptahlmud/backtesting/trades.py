@@ -10,10 +10,10 @@ from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
 
 
-class TradingTarget(BaseModel):
-    """Represents a trading target.
+class BarrierLevels(BaseModel):
+    """Represents trading barriers.
 
-    The target is represented by _barriers_ where the asset is sold if it reached either barrier.
+    A **barrier** is a limit where the asset is sold if it reaches it.
     These barriers are _always_ expressed in percentage to reference price.
 
     Attributes:
@@ -150,7 +150,7 @@ def calculate_trade(
     open_at: datetime,
     money_to_invest: float,
     fluctuations: Fluctuations,
-    target: TradingTarget,
+    target: BarrierLevels,
     side: Side,
 ) -> Trade:
     """Calculate a trade."""

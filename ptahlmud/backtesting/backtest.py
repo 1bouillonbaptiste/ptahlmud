@@ -10,7 +10,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from ptahlmud.backtesting.portfolio import Portfolio
-from ptahlmud.backtesting.trades import TradingTarget, calculate_trade
+from ptahlmud.backtesting.trades import BarrierLevels, calculate_trade
 from ptahlmud.backtesting.trading import Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.signal import Action, Side, Signal
@@ -73,15 +73,15 @@ def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
     return matches
 
 
-def _create_target(match: MatchedSignal, risk_config: RiskConfig) -> TradingTarget:
+def _create_target(match: MatchedSignal, risk_config: RiskConfig) -> BarrierLevels:
     """Create an instance of `TradingTarget`."""
     if match.entry.side == Side.LONG:
-        return TradingTarget(
+        return BarrierLevels(
             high=risk_config.take_profit,
             low=risk_config.stop_loss,
         )
     else:
-        return TradingTarget(
+        return BarrierLevels(
             high=risk_config.stop_loss,
             low=min(risk_config.take_profit, 0.999),  # the maximum profit is 100% if the price goes at 0
         )
