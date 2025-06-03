@@ -4,8 +4,8 @@ from decimal import Decimal
 import pytest
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Position, Trade
 from ptahlmud.backtesting.portfolio import Portfolio, WealthItem, WealthSeries
+from ptahlmud.backtesting.trading import Position, Trade
 from ptahlmud.types.signal import Side
 
 

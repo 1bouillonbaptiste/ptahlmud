@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ptahlmud.backtesting.exposition import Position, Trade
+from ptahlmud.backtesting.trading import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side

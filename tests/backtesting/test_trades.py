@@ -7,13 +7,13 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Position, Trade
 from ptahlmud.backtesting.trades import (
     ExitSignal,
     TradingTarget,
     _get_position_exit_signal,
     calculate_trade,
 )
+from ptahlmud.backtesting.trading import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle

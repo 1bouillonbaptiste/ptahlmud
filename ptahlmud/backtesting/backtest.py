@@ -9,9 +9,9 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from ptahlmud.backtesting.exposition import Trade
 from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.backtesting.trades import TradingTarget, calculate_trade
+from ptahlmud.backtesting.trading import Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.signal import Action, Side, Signal
 
