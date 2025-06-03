@@ -1,5 +1,5 @@
-import datetime
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 from ptahlmud.types.signal import Side
 
@@ -26,7 +26,7 @@ class Position:
 
     volume: float
     open_price: float
-    open_date: datetime.datetime
+    open_date: datetime
     initial_investment: float
     fees_pct: float
 
@@ -45,7 +45,7 @@ class Position:
     @classmethod
     def open(
         cls,
-        open_date: datetime.datetime,
+        open_date: datetime,
         open_price: float,
         money_to_invest: float,
         fees_pct: float,
@@ -67,6 +67,16 @@ class Position:
             higher_barrier=higher_barrier,
         )
 
+    def close(self, close_date: datetime, close_price: float) -> "Trade":
+        """Close the trading position."""
+        if self.is_closed:
+            raise ValueError("Position il already closed.")
+        return Trade(
+            **vars(self),
+            close_date=close_date,
+            close_price=close_price,
+        )
+
 
 @dataclass
 class Trade(Position):
@@ -79,7 +89,7 @@ class Trade(Position):
         close_price: price of the coin when the position was closed
     """
 
-    close_date: datetime.datetime
+    close_date: datetime
     close_price: float
 
     @property
@@ -91,6 +101,11 @@ class Trade(Position):
             price_diff = self.open_price - self.close_price
 
         return self.volume * price_diff + self.initial_investment - self.open_fees
+
+    @classmethod
+    def open(cls, *args, **kwargs) -> None:
+        """Cannot open a trade."""
+        raise RuntimeError("Cannot open a trade, please use `Position.open()` instead.")
 
     @property
     def close_fees(self) -> float:
@@ -107,7 +122,7 @@ class Trade(Position):
         return self.open_fees + self.close_fees
 
     @property
-    def total_duration(self) -> datetime.timedelta:
+    def total_duration(self) -> timedelta:
         """Overall duration of the trade."""
         return self.close_date - self.open_date
 
@@ -120,27 +135,3 @@ class Trade(Position):
 def _calculate_fees(investment: float, fees_pct: float) -> float:
     """The cost to open a position."""
     return investment * fees_pct
-
-
-def close_position(position: Position, close_date: datetime.datetime, close_price: float) -> Trade:
-    """Close a position to a trade.
-
-    Args:
-        position: the position to be closed
-        close_date: time when the position is closed
-        close_price: price when the position is closed
-
-    Returns:
-        closed position as a new trade instance
-
-    Raises:
-        ValueError: if the position is already a trade, since it is inheriting
-    """
-    if position.is_closed:
-        raise ValueError("Position il already closed.")
-
-    return Trade(
-        **vars(position),
-        close_date=close_date,
-        close_price=close_price,
-    )

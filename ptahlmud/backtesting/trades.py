@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ptahlmud.backtesting.exposition import Position, Trade, close_position
+from ptahlmud.backtesting.exposition import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
@@ -117,14 +117,12 @@ def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
         if signal.hold_position:
             continue
         close_price, close_date = signal.to_price_date(position=position, candle=candle)
-        return close_position(
-            position=position,
+        return position.close(
             close_date=close_date,
             close_price=close_price,
         )
     last_candle = fluctuations.candles[-1]
-    return close_position(
-        position=position,
+    return position.close(
         close_date=last_candle.close_time,
         close_price=last_candle.close,
     )

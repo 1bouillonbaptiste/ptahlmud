@@ -7,7 +7,7 @@ from hypothesis import given
 from hypothesis import strategies as some
 from hypothesis.strategies import composite
 
-from ptahlmud.backtesting.exposition import Position, close_position
+from ptahlmud.backtesting.exposition import Position
 from ptahlmud.types.signal import Side
 
 
@@ -30,7 +30,7 @@ def test_open_position(fake_position):
 
 
 def test_close_position(fake_position):
-    trade = close_position(position=fake_position, close_date=datetime(2024, 8, 25), close_price=125)
+    trade = fake_position.close(close_date=datetime(2024, 8, 25), close_price=125)
 
     expected_close_fees = 125 * fake_position.volume * 0.001
     assert trade.close_fees == pytest.approx(expected_close_fees)
@@ -118,7 +118,7 @@ def test_position_properties(params):
 def test_trade_properties(params):
     position_params, trade_params = params
     position = Position.open(**position_params)
-    trade = close_position(position, **trade_params)
+    trade = position.close(**trade_params)
 
     # basic validation
     assert trade.is_closed
