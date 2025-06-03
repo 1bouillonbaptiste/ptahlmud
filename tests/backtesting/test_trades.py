@@ -7,9 +7,9 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
+from ptahlmud.backtesting.models.barriers import BarrierLevels
+from ptahlmud.backtesting.models.exit_signal import ExitSignal
 from ptahlmud.backtesting.trades import (
-    BarrierLevels,
-    ExitSignal,
     _get_position_exit_signal,
     calculate_trade,
 )

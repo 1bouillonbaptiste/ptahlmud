@@ -1,83 +1,11 @@
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
 
-from pydantic import BaseModel, Field
-
+from ptahlmud.backtesting.models.barriers import BarrierLevels
+from ptahlmud.backtesting.models.exit_signal import ExitSignal
 from ptahlmud.backtesting.trading import Position, Trade
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
-
-
-class BarrierLevels(BaseModel):
-    """Represents trading barriers.
-
-    A **barrier** is a limit where the asset is sold if it reaches it.
-    These barriers are _always_ expressed in percentage to reference price.
-
-    Attributes:
-        high: higher barrier, defaults to inf or "never sell"
-        low: lower barrier, default to 1 or "never sell"
-    """
-
-    high: float = Field(gt=0, lt=float("inf"))
-    low: float = Field(gt=0, lt=1)
-
-    def high_value(self, price: float) -> float:
-        """Convert the higher barrier in pct to actual price value."""
-        return price * (1 + self.high)
-
-    def low_value(self, price: float) -> float:
-        """Convert the lower barrier in pct to actual price value."""
-        return price * (1 - self.low)
-
-
-@dataclass(slots=True)
-class ExitSignal:
-    """How a Position needs to be closed.
-
-    The signal can be:
-    - take profit at high time
-    - take profit at undefined time (take close time)
-    - stop loss at low time
-    - stop loss at undefined time (take close time)
-    - close at close time
-    """
-
-    price_signal: Literal["high_barrier", "low_barrier", "close", "hold"]
-    date_signal: Literal["high", "low", "close", "hold"]
-
-    @property
-    def hold_position(self) -> bool:
-        return (self.price_signal == "hold") or (self.date_signal == "hold")
-
-    def to_price_date(self, position: Position, candle: Candle) -> tuple[float, datetime]:
-        """Convert a signal to price ad date values."""
-
-        match self.price_signal:
-            case "high_barrier":
-                price = position.higher_barrier
-            case "low_barrier":
-                price = position.lower_barrier
-            case "close":
-                price = candle.close
-            case "hold":
-                price = 0
-        match self.date_signal:
-            case "high":
-                date = candle.high_time
-                if date is None:
-                    raise ValueError("Candle has no high time.")
-            case "low":
-                date = candle.low_time
-                if date is None:
-                    raise ValueError("Candle has no low time.")
-            case "close":
-                date = candle.close_time
-            case "hold":
-                date = datetime(1900, 1, 1)
-        return price, date
 
 
 def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
