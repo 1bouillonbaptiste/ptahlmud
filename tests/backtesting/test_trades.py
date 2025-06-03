@@ -7,7 +7,7 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Position, Trade, open_position
+from ptahlmud.backtesting.exposition import Position, Trade
 from ptahlmud.backtesting.trades import (
     ExitSignal,
     TradingTarget,
@@ -23,7 +23,7 @@ from ptahlmud.types.signal import Side
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(
+    return Position.open(
         open_date=datetime(2024, 8, 20),
         open_price=100,
         money_to_invest=50,

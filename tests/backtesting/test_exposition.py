@@ -7,13 +7,13 @@ from hypothesis import given
 from hypothesis import strategies as some
 from hypothesis.strategies import composite
 
-from ptahlmud.backtesting.exposition import Position, close_position, open_position
+from ptahlmud.backtesting.exposition import Position, close_position
 from ptahlmud.types.signal import Side
 
 
 @pytest.fixture
 def fake_position() -> Position:
-    return open_position(
+    return Position.open(
         open_date=datetime(2024, 8, 20),
         open_price=100,
         money_to_invest=50,
@@ -97,7 +97,7 @@ def valid_trade_parameters(draw) -> tuple[dict[str, Any], dict[str, Any]]:
 
 @given(valid_position_parameters())
 def test_position_properties(params):
-    position = open_position(**params)
+    position = Position.open(**params)
 
     assert position.initial_investment > 0
     assert position.volume > 0
@@ -117,7 +117,7 @@ def test_position_properties(params):
 @given(valid_trade_parameters())
 def test_trade_properties(params):
     position_params, trade_params = params
-    position = open_position(**position_params)
+    position = Position.open(**position_params)
     trade = close_position(position, **trade_params)
 
     # basic validation

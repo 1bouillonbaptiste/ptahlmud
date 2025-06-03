@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.exposition import Trade, close_position, open_position
+from ptahlmud.backtesting.exposition import Position, Trade, close_position
 from ptahlmud.backtesting.portfolio import Portfolio, WealthItem, WealthSeries
 from ptahlmud.types.signal import Side
 
@@ -124,7 +124,7 @@ class PortfolioUpdateFromTradeCases:
     def case_long_trade(self):
         fees_pct = 0.1
         money_to_invest = 100
-        position = open_position(
+        position = Position.open(
             open_date=datetime(2020, 1, 1),
             open_price=10,
             money_to_invest=money_to_invest,
@@ -139,7 +139,7 @@ class PortfolioUpdateFromTradeCases:
 
     def case_short_trade(self):
         money_to_invest = 100
-        position = open_position(
+        position = Position.open(
             open_date=datetime(2020, 1, 1),
             open_price=100,
             money_to_invest=money_to_invest,

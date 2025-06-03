@@ -42,6 +42,31 @@ class Position:
         """A position is always open."""
         return False
 
+    @classmethod
+    def open(
+        cls,
+        open_date: datetime.datetime,
+        open_price: float,
+        money_to_invest: float,
+        fees_pct: float,
+        side: Side,
+        lower_barrier: float = 0,
+        higher_barrier: float = float("inf"),
+    ):
+        """Open a trading position."""
+        open_fees = _calculate_fees(money_to_invest, fees_pct=fees_pct)
+        volume = (money_to_invest - open_fees) / open_price
+        return cls(
+            open_date=open_date,
+            open_price=open_price,
+            volume=volume,
+            initial_investment=money_to_invest,
+            fees_pct=fees_pct,
+            side=side,
+            lower_barrier=lower_barrier,
+            higher_barrier=higher_barrier,
+        )
+
 
 @dataclass
 class Trade(Position):
@@ -95,45 +120,6 @@ class Trade(Position):
 def _calculate_fees(investment: float, fees_pct: float) -> float:
     """The cost to open a position."""
     return investment * fees_pct
-
-
-def open_position(
-    open_date: datetime.datetime,
-    open_price: float,
-    money_to_invest: float,
-    fees_pct: float,
-    side: Side,
-    lower_barrier: float = 0,
-    higher_barrier: float = float("inf"),
-) -> Position:
-    """Opens a new trading position.
-
-    This function is the preferred way to create a new instance of a trading position.
-
-    Parameters:
-        open_date: the date and time when the position is to be opened
-        open_price: the price at which the position is opened
-        money_to_invest: the amount of money to be invested in the position
-        fees_pct: cost in percentage applied by a broker
-        side: the side of the position
-        lower_barrier: the price level at which the position should be automatically closed to limit losses
-        higher_barrier: the price level at which the position should be automatically closed to secure profits
-
-    Returns:
-        a new instance of position
-    """
-    open_fees = _calculate_fees(money_to_invest, fees_pct=fees_pct)
-    volume = (money_to_invest - open_fees) / open_price
-    return Position(
-        open_date=open_date,
-        open_price=open_price,
-        volume=volume,
-        initial_investment=money_to_invest,
-        fees_pct=fees_pct,
-        side=side,
-        lower_barrier=lower_barrier,
-        higher_barrier=higher_barrier,
-    )
 
 
 def close_position(position: Position, close_date: datetime.datetime, close_price: float) -> Trade:

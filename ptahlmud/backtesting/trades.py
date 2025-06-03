@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ptahlmud.backtesting.exposition import Position, Trade, close_position, open_position
+from ptahlmud.backtesting.exposition import Position, Trade, close_position
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
@@ -145,7 +145,7 @@ def calculate_trade(
     else:
         open_date = candle.open_time
         open_price = candle.open
-    position = open_position(
+    position = Position.open(
         open_date=open_date,
         open_price=open_price,
         money_to_invest=money_to_invest,
