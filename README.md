@@ -1,8 +1,11 @@
 # ptahlmud
 
-A Python library for crafting and backtesting trading strategies. ptahlmud helps you design, test, and evaluate algorithmic trading strategies using historical market data.
+Python library for crafting and backtesting trading strategies.
+Ptahlmud helps you design, test, and evaluate algorithmic trading strategies using historical market data.
 
 ## Features
+
+This project is still under construction and features may be added or reworked.
 
 - **Signal-based trading**: Define entry and exit points with customizable signals
 - **Portfolio simulation**: Track your strategy's performance over time
@@ -21,10 +24,11 @@ Here's a simple example of defining trading signals and running a backtest:
 
 ```python
 from datetime import datetime
-from ptahlmud.types.signal import Signal, Side, Action
+
 from ptahlmud.backtesting.backtest import RiskConfig, process_signals
 from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.entities.fluctuations import Fluctuations
+from ptahlmud.types.signal import Signal, Side, Action
 
 # Define trading signals
 signals = [
@@ -75,38 +79,53 @@ You can define custom trading strategies by creating signals based on technical 
 ```python
 from ptahlmud.types.signal import Signal, Side, Action
 
-def moving_average_strategy(market_data, fast_period=10, slow_period=30) -> list[Signal]:
+def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) -> list[Signal]:
     """Simple moving average crossover strategy."""
     signals: list[Signal] = []
 
     # Calculate moving averages (simplified example)
-    fast_ma = calculate_moving_average(market_data, fast_period)
-    slow_ma = calculate_moving_average(market_data, slow_period)
+    fast_ma = calculate_moving_average(fluctuations, fast_period)
+    slow_ma = calculate_moving_average(fluctuations, slow_period)
 
     # Generate signals on crossovers
-    for i in range(1, len(market_data)):
-        # fast ma crossed slow ma
-        if fast_ma[i-1] < slow_ma[i-1] and fast_ma[i] > slow_ma[i]:
+    for index, candle in enumerate(fluctuations.candles):
+        # fast ma crossed above slow ma
+        if fast_ma[index-1] < slow_ma[index-1] and fast_ma[index] > slow_ma[index]:
             signals.append(Signal(
-                date=market_data[i].date,
+                date=candle.close_time,
                 side=Side.LONG,
                 action=Action.ENTER
             ))
 
-        # slow ma crossed fast ma
-        if fast_ma[i-1] > slow_ma[i-1] and fast_ma[i] < slow_ma[i]:
+        # slow ma crossed bellow slow ma
+        if fast_ma[index-1] > slow_ma[index-1] and fast_ma[index] < slow_ma[index]:
             signals.append(Signal(
-                date=market_data[i].date,
+                date=candle.close_time,
                 side=Side.LONG,
                 action=Action.EXIT
             ))
 
     return signals
+
+signals = moving_average_strategy(market_date, fast_period=10, slow_period=30)
+trades, final_portfolio = process_signals(
+    signals=signals,
+    fluctuations=market_date,
+    risk_config=risk_config,
+    initial_portfolio=initial_portfolio,
+)
+
+
 ```
 
-## Development Setup
+## Development
 
-Beforehand, you must install [pyenv](https://github.com/pyenv/pyenv) with python >= 3.11.
+It is recommended to work in a virtual environment, you can install [pyenv](https://github.com/pyenv/pyenv) with python >= 3.11.
+```bash
+pyenv install 3.12.5
+pyenv virtualenv 3.12.5 ptahlmud
+pyenv activate ptahlmud
+```
 
 ```bash
 # Clone the repository
@@ -114,7 +133,7 @@ git clone https://github.com/yourusername/ptahlmud.git
 cd ptahlmud
 ```
 
-Install development dependencies
+Setup environment
 ```bash
 make setup
 ```
@@ -130,5 +149,7 @@ make check
 ```
 
 ## Contributing
-Contributions are welcome! Please feel free to open an issue or send me a dm.
-You can also submit a Pull Request.
+
+Contributions are welcome!
+You can open an issue, submit a pull-request or simply chat with me.
+I'm always pleased to discuss design, performance or technical stuff.
