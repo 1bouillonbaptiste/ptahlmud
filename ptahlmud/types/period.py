@@ -9,21 +9,23 @@ while time-based data records the price at a specific time interval with a given
 
 import datetime
 import re
+from dataclasses import dataclass
 
 
+@dataclass
 class Period:
     """Represent a period.
 
-    Arg:
+    Attributes:
         timeframe: a string containing a time unit and duration of the period (e.g. "1m" or "1d")
     """
 
-    def __init__(self, timeframe: str):
-        self.timeframe = timeframe
-        self._unit, self._value = _parse_timeframe(timeframe)
+    timeframe: str
 
     def __post_init__(self):
-        """Validate the period attributes."""
+        """Enrich the period with its time unit and value."""
+        self._unit, self._value = _parse_timeframe(self.timeframe)
+
         if self._unit not in ["m", "h", "d"]:
             raise ValueError(f"Unknown period unit `{self._unit}`. Supported units are: 'm', 'h' and 'd'.")
         if self._value < 1:
