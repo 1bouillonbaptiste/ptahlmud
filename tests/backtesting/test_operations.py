@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import datetime
+from decimal import Decimal
 
 import pytest
 from hypothesis import given
@@ -25,9 +26,9 @@ from ptahlmud.types.signal import Side
 def fake_position() -> Position:
     return Position.open(
         open_date=datetime(2024, 8, 20),
-        open_price=100,
-        money_to_invest=50,
-        fees_pct=0.001,
+        open_price=Decimal(100),
+        money_to_invest=Decimal(50),
+        fees_pct=Decimal("0.001"),
         side=Side.LONG,
     )
 
@@ -153,14 +154,14 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: B
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
-        money_to_invest=100,
+        money_to_invest=Decimal(100),
         fluctuations=fluctuations,
         target=target,
         side=side,
     )
 
-    higher_barrier = target.high_value(entry_candle.close)
-    lower_barrier = target.low_value(entry_candle.close)
+    higher_barrier = Decimal(str(target.high_value(entry_candle.close)))
+    lower_barrier = Decimal(str(target.low_value(entry_candle.close)))
 
     assert trade.higher_barrier == pytest.approx(higher_barrier)
     assert trade.lower_barrier == pytest.approx(lower_barrier)
@@ -181,7 +182,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
-        money_to_invest=100,
+        money_to_invest=Decimal(100),
         fluctuations=fluctuations,
         target=target,
         side=side,
@@ -200,7 +201,7 @@ def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: B
     entry_candle: Candle = fluctuations.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
-        money_to_invest=100,
+        money_to_invest=Decimal(100),
         fluctuations=fluctuations,
         target=target,
         side=side,

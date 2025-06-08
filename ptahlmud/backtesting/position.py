@@ -11,11 +11,12 @@ components for simulating trades in a backtesting environment.
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from ptahlmud.types.signal import Side
 
 
-def _calculate_fees(investment: float, fees_pct: float) -> float:
+def _calculate_fees(investment: Decimal, fees_pct: Decimal) -> Decimal:
     """The cost to open a position."""
     return investment * fees_pct
 
@@ -41,17 +42,17 @@ class Position:
 
     side: Side
 
-    volume: float
-    open_price: float
+    volume: Decimal
+    open_price: Decimal
     open_date: datetime
-    initial_investment: float
-    fees_pct: float
+    initial_investment: Decimal
+    fees_pct: Decimal
 
-    lower_barrier: float
-    higher_barrier: float
+    lower_barrier: Decimal
+    higher_barrier: Decimal
 
     @property
-    def open_fees(self) -> float:
+    def open_fees(self) -> Decimal:
         """Fees incurred at the moment of opening the position."""
         return _calculate_fees(investment=self.initial_investment, fees_pct=self.fees_pct)
 
@@ -64,14 +65,16 @@ class Position:
     def open(
         cls,
         open_date: datetime,
-        open_price: float,
-        money_to_invest: float,
-        fees_pct: float,
+        open_price: Decimal,
+        money_to_invest: Decimal,
+        fees_pct: Decimal,
         side: Side,
-        lower_barrier: float = 0,
-        higher_barrier: float = float("inf"),
+        lower_barrier: Decimal | None = None,
+        higher_barrier: Decimal | None = None,
     ):
         """Open a trading position."""
+        lower_barrier = lower_barrier or Decimal("0")
+        higher_barrier = higher_barrier or Decimal(float("inf"))
         open_fees = _calculate_fees(money_to_invest, fees_pct=fees_pct)
         volume = (money_to_invest - open_fees) / open_price
         return cls(
@@ -85,7 +88,7 @@ class Position:
             higher_barrier=higher_barrier,
         )
 
-    def close(self, close_date: datetime, close_price: float) -> "Trade":
+    def close(self, close_date: datetime, close_price: Decimal) -> "Trade":
         """Close an open position and convert it to a `Trade`."""
         if self.is_closed:
             raise ValueError("Position il already closed.")
@@ -110,10 +113,10 @@ class Trade(Position):
     """
 
     close_date: datetime
-    close_price: float
+    close_price: Decimal
 
     @property
-    def receipt(self) -> float:
+    def receipt(self) -> Decimal:
         """The amount of money received after closing the trade."""
         if self.side == Side.LONG:
             price_diff = self.close_price - self.open_price
@@ -132,18 +135,18 @@ class Trade(Position):
         raise RuntimeError("Cannot open a trade, please use `Position.open()` instead.")
 
     @property
-    def close_fees(self) -> float:
+    def close_fees(self) -> Decimal:
         """Fees incurred at the moment of closing the trade."""
 
         return _calculate_fees(investment=self.receipt, fees_pct=self.fees_pct)
 
     @property
-    def total_profit(self) -> float:
+    def total_profit(self) -> Decimal:
         """The overall profit or loss from the trade."""
         return self.receipt - self.initial_investment - self.close_fees
 
     @property
-    def total_fees(self) -> float:
+    def total_fees(self) -> Decimal:
         """The total fees incurred during the trade."""
         return self.open_fees + self.close_fees
 

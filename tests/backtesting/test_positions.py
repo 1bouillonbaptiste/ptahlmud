@@ -15,27 +15,27 @@ from ptahlmud.types.signal import Side
 def fake_position() -> Position:
     return Position.open(
         open_date=datetime(2024, 8, 20),
-        open_price=100,
-        money_to_invest=50,
-        fees_pct=0.001,
+        open_price=Decimal(100),
+        money_to_invest=Decimal(50),
+        fees_pct=Decimal(str(0.001)),
         side=Side.LONG,
     )
 
 
 def test_open_position(fake_position):
     assert fake_position.initial_investment == 50
-    assert fake_position.open_fees == 0.05
-    assert fake_position.volume == pytest.approx(0.4995, abs=1e-5)
+    assert fake_position.open_fees == Decimal(str(0.05))
+    assert fake_position.volume == Decimal(str(0.4995))
     assert fake_position.volume * fake_position.open_price + fake_position.open_fees == 50
 
 
 def test_close_position(fake_position):
-    trade = fake_position.close(close_date=datetime(2024, 8, 25), close_price=125)
+    trade = fake_position.close(close_date=datetime(2024, 8, 25), close_price=Decimal(125))
 
-    expected_close_fees = 125 * fake_position.volume * 0.001
-    assert trade.close_fees == pytest.approx(expected_close_fees)
-    assert trade.total_fees == pytest.approx(expected_close_fees + fake_position.open_fees)
-    assert trade.total_profit == pytest.approx(fake_position.volume * 125 - 50 - trade.close_fees)
+    expected_close_fees = 125 * fake_position.volume * Decimal(str(0.001))
+    assert trade.close_fees == expected_close_fees
+    assert trade.total_fees == expected_close_fees + fake_position.open_fees
+    assert trade.total_profit == fake_position.volume * 125 - 50 - trade.close_fees
     assert trade.total_duration == timedelta(days=5)
 
 
@@ -110,7 +110,7 @@ def test_position_properties(params):
     assert not position.is_closed
 
     # financial calculations
-    assert position.open_fees == pytest.approx(position.initial_investment * position.fees_pct)
+    assert position.open_fees == position.initial_investment * position.fees_pct
     assert position.volume * position.open_price + position.open_fees == pytest.approx(position.initial_investment)
 
 

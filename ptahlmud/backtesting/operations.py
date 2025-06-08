@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.exit_signal import ExitSignal
@@ -70,13 +71,13 @@ def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
     last_candle = fluctuations_subset.candles[-1]
     return position.close(
         close_date=last_candle.close_time,
-        close_price=last_candle.close,
+        close_price=Decimal(str(last_candle.close)),
     )
 
 
 def calculate_trade(
     open_at: datetime,
-    money_to_invest: float,
+    money_to_invest: Decimal,
     fluctuations: Fluctuations,
     target: BarrierLevels,
     side: Side,
@@ -91,11 +92,11 @@ def calculate_trade(
         open_price = candle.open
     position = Position.open(
         open_date=open_date,
-        open_price=open_price,
+        open_price=Decimal(str(open_price)),
         money_to_invest=money_to_invest,
-        fees_pct=0.001,
+        fees_pct=Decimal(str(0.001)),
         side=side,
-        higher_barrier=target.high_value(open_price),
-        lower_barrier=target.low_value(open_price),
+        higher_barrier=Decimal(str(target.high_value(open_price))),
+        lower_barrier=Decimal(str(target.low_value(open_price))),
     )
     return _close_position(position, fluctuations)

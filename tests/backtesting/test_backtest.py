@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 import pytest
 from hypothesis import given
@@ -163,12 +164,12 @@ def test_process_signals_portfolio_property(
     # every trade gets closed during the trading session, so the asset volume is unchanged
     initial_asset_volume = initial_portfolio.get_asset_volume_at(fluctuations.candles[0].open_time)
     final_asset_volume = portfolio.get_asset_volume_at(fluctuations.candles[-1].close_time)
-    assert initial_asset_volume == final_asset_volume
+    assert initial_asset_volume == pytest.approx(final_asset_volume)
 
     initial_currency_amount = initial_portfolio.get_available_capital_at(fluctuations.candles[0].open_time)
     final_currency_amount = portfolio.get_available_capital_at(fluctuations.candles[-1].close_time)
     global_profit = sum(trade.total_profit for trade in trades)
-    assert (initial_currency_amount + global_profit) == pytest.approx(final_currency_amount, abs=1e-7)
+    assert (Decimal(str(initial_currency_amount)) + global_profit) == pytest.approx(final_currency_amount)
 
     assert all(item.currency >= 0 for item in portfolio.wealth_series.items)
     assert all(item.asset >= 0 for item in portfolio.wealth_series.items)

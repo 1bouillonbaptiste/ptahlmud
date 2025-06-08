@@ -15,6 +15,7 @@ a sequence of raw trading signals into a list of executed trades and an updated 
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -133,6 +134,7 @@ def process_signals(
     portfolio = deepcopy(initial_portfolio)
     fluctuations_end_time = fluctuations.candles[-1].open_time
     trades: list[Trade] = []
+    trade_size = Decimal(str(risk_config.size))
     for match in _match_signals(signals):
         available_capital = portfolio.get_available_capital_at(match.entry.date)
         if available_capital == 0:
@@ -144,7 +146,7 @@ def process_signals(
         fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date)
         new_trade = calculate_trade(
             open_at=match.entry.date,
-            money_to_invest=available_capital * risk_config.size,
+            money_to_invest=available_capital * trade_size,
             fluctuations=fluctuations_subset,
             target=_create_target(match=match, risk_config=risk_config),
             side=match.entry.side,

@@ -16,6 +16,7 @@ The signal combines price information (which price level to use) with timing inf
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 
 from ptahlmud.backtesting.position import Position
@@ -33,7 +34,7 @@ class ExitSignal:
     def hold_position(self) -> bool:
         return (self.price_signal == "hold") or (self.date_signal == "hold")
 
-    def to_price_date(self, position: Position, candle: Candle) -> tuple[float, datetime]:
+    def to_price_date(self, position: Position, candle: Candle) -> tuple[Decimal, datetime]:
         """Convert a signal to price ad date values."""
 
         match self.price_signal:
@@ -42,9 +43,9 @@ class ExitSignal:
             case "low_barrier":
                 price = position.lower_barrier
             case "close":
-                price = candle.close
+                price = Decimal(str(candle.close))
             case "hold":
-                price = 0
+                price = Decimal(0)
         match self.date_signal:
             case "high":
                 date = candle.high_time
@@ -58,4 +59,4 @@ class ExitSignal:
                 date = candle.close_time
             case "hold":
                 date = datetime(1900, 1, 1)
-        return price, date
+        return price, date  # noqa: price and date are always set
