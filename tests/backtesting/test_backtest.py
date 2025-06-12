@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 import pytest
 from hypothesis import given
@@ -121,11 +120,10 @@ def test_process_signals_trades_property(request, signals: list[Signal], risk_co
     """Check that trades are correctly generated from signals."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
-    trades, _ = process_signals(
+    trades = process_signals(
         signals=signals,
         risk_config=risk_config,
         fluctuations=fluctuations,
-        initial_portfolio=Portfolio(starting_date=datetime(2020, 1, 1)),
     )
 
     # we don't trade when there is no capital, so we can have less trades than entry signals.
@@ -138,24 +136,22 @@ def test_process_signals_trades_property(request, signals: list[Signal], risk_co
     some_signals(),
     some_risk_config(),
 )
-def test_process_signals_portfolio_property(request, signals: list[Signal], risk_config: RiskConfig):
-    """Check the portfolio state after signals are processed."""
+def test_process_signals_portfolio_validity(request, signals: list[Signal], risk_config: RiskConfig):
+    """Check that portfolio state remains valid throughout the backtest."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
-    initial_portfolio = Portfolio(starting_date=datetime(2020, 1, 1))
-    trades, portfolio = process_signals(
-        signals=signals, risk_config=risk_config, fluctuations=fluctuations, initial_portfolio=initial_portfolio
-    )
+    trades = process_signals(signals=signals, risk_config=risk_config, fluctuations=fluctuations)
 
-    # every trade gets closed during the trading session, so the asset volume is unchanged
-    initial_asset_volume = initial_portfolio.get_asset_volume_at(fluctuations.candles[0].open_time)
-    final_asset_volume = portfolio.get_asset_volume_at(fluctuations.candles[-1].close_time)
-    assert initial_asset_volume == pytest.approx(final_asset_volume)
+    if trades:
+        portfolio = Portfolio(starting_date=trades[0].open_date)
+        for trade in trades:
+            portfolio.update_from_trade(trade)
 
-    initial_currency_amount = initial_portfolio.get_available_capital_at(fluctuations.candles[0].open_time)
-    final_currency_amount = portfolio.get_available_capital_at(fluctuations.candles[-1].close_time)
-    global_profit = sum(trade.total_profit for trade in trades)
-    assert (Decimal(str(initial_currency_amount)) + global_profit) == pytest.approx(final_currency_amount)
+        # every trade gets closed during the trading session, so the asset volume is the initial value
+        assert portfolio.get_asset_volume_at(trades[-1].close_date) == Portfolio.default_asset_amount()
+        assert portfolio.get_available_capital_at(trades[-1].close_date) == portfolio.default_currency_amount() + sum(
+            trade.total_profit for trade in trades
+        )
 
-    assert all(item.currency >= 0 for item in portfolio.wealth_series.items)
-    assert all(item.asset >= 0 for item in portfolio.wealth_series.items)
+        assert all(item.currency >= 0 for item in portfolio.wealth_series.items)
+        assert all(item.asset >= 0 for item in portfolio.wealth_series.items)

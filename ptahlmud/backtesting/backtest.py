@@ -12,7 +12,6 @@ The core functionality is encapsulated in `process_signals()`, which transforms
 a sequence of raw trading signals into a list of executed trades and an updated portfolio.
 """
 
-from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -117,21 +116,19 @@ def process_signals(
     signals: list[Signal],
     risk_config: RiskConfig,
     fluctuations: Fluctuations,
-    initial_portfolio: Portfolio,
-) -> tuple[list[Trade], Portfolio]:
+) -> list[Trade]:
     """Process trading signals to generate trades and track portfolio changes.
 
     Args:
         signals: trading signals
         risk_config: risk management parameters
         fluctuations: market data
-        initial_portfolio: portfolio starting state
 
     Returns:
         executed trades as a list
         the portfolio after trading session
     """
-    portfolio = deepcopy(initial_portfolio)
+    portfolio = Portfolio(starting_date=fluctuations.candles[0].open_time)
     fluctuations_end_time = fluctuations.candles[-1].open_time
     trades: list[Trade] = []
     trade_size = Decimal(str(risk_config.size))
@@ -153,4 +150,4 @@ def process_signals(
         )
         trades.append(new_trade)
         portfolio.update_from_trade(new_trade)
-    return trades, portfolio
+    return trades
