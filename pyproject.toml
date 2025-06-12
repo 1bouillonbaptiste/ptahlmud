@@ -1,6 +1,6 @@
 [project]
 name = "ptahlmud"
-version = "0.0.3"
+version = "0.0.4"
 description = "Trading strategies crafting tools"
 authors = [
     {name="Baptiste Bouillon", email="1bouillonbaptiste@gmail.com"},
@@ -11,16 +11,17 @@ requires-python = ">=3.11,<4.0"
 [tool.poetry.dependencies]
 pydantic = ">=2.11,<3"
 numpy = ">=2.0,<3"
-hypothesis = ">=6.131,<7"
+
 
 [tool.poetry.group.dev.dependencies]
+hypothesis = ">=6.131,<7"
+ipython = ">=9.3,<10"
+matplotlib = ">=3.10,<4"
 mypy = ">=1.15.0,<2"
+pre-commit = ">=4.2,<5"
 pytest = ">=8.3,<9"
 pytest-cases = ">=3.8,<4"
 pytest-cov = ">=6.1,<7"
-pre-commit = ">=4.2,<5"
-ipython = ">=9.3,<10"
-matplotlib = ">=3.10,<4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
