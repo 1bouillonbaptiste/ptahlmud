@@ -26,7 +26,6 @@ Here's a simple example of defining trading signals and running a backtest:
 from datetime import datetime
 
 from ptahlmud.backtesting.backtest import RiskConfig, process_signals
-from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.types.signal import Signal, Side, Action
 
@@ -45,27 +44,19 @@ risk_config = RiskConfig(
     stop_loss=0.03,    # Cut losses at 3% price decrease
 )
 
-# Initialize portfolio
-initial_portfolio = Portfolio(
-    starting_date=datetime(2023, 1, 1),
-    starting_asset=0,
-    starting_currency=10_000,
-)
-
 # Load market data (you'll need to implement this for your data source)
 fluctuations: Fluctuations = load_your_market_data(...)
 
 # Run the backtest
-trades, final_portfolio = process_signals(
+trades = process_signals(
     signals=signals,
     risk_config=risk_config,
     fluctuations=fluctuations,
-    initial_portfolio=initial_portfolio,
 )
 
 # Analyze results
 print(f"Number of trades : {len(trades)}")
-print(f"Final capital : {final_portfolio.get_available_capital_at(datetime(2023, 3, 1))}")
+print(f"Total profit : {sum([trade.total_profit for trade in trades])}")
 print(f"Win rate : {sum([1 for trade in trades if trade.total_profit > 0]) / len(trades)}")
 ```
 
@@ -108,11 +99,10 @@ def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) ->
     return signals
 
 signals = moving_average_strategy(market_date, fast_period=10, slow_period=30)
-trades, final_portfolio = process_signals(
+trades = process_signals(
     signals=signals,
     fluctuations=market_date,
     risk_config=risk_config,
-    initial_portfolio=initial_portfolio,
 )
 
 

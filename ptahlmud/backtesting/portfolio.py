@@ -120,26 +120,35 @@ def _find_date_position(date: datetime, date_collection: list[datetime]) -> int:
 class Portfolio:
     """Represent a trading portfolio over time.
 
-    The `Portfolio` class manages operations involving trades and tracks
+    The `Portfolio` class tracks operations involving trades and tracks
     the state of wealth (currency and asset volume) dynamically across time.
+    It always starts with an asset volume of 0 and a free currency amount of 100.
 
     Args:
         starting_date: the initial timestamp marking the portfolio's creation
-        starting_asset: initial volume of asset in the portfolio
-        starting_currency: initial amount of free capital in the portfolio
     """
 
     wealth_series: WealthSeries
 
-    def __init__(self, starting_date: datetime, starting_asset: float, starting_currency: float):
+    def __init__(self, starting_date: datetime):
         wealth_items = [
             WealthItem(
                 date=starting_date,
-                asset=Decimal(starting_asset),
-                currency=Decimal(starting_currency),
+                asset=self.default_asset_amount(),
+                currency=self.default_currency_amount(),
             )
         ]
         self.wealth_series = WealthSeries(items=wealth_items, entries=[])
+
+    @staticmethod
+    def default_currency_amount() -> Decimal:
+        """The amount of currency available at the start of the trading session."""
+        return Decimal(100)
+
+    @staticmethod
+    def default_asset_amount() -> Decimal:
+        """The amount of asset available at the start of the trading session."""
+        return Decimal(0)
 
     def _perform_entry(self, date: datetime, currency_amount: Decimal, asset_volume: Decimal) -> None:
         """Record market entry by investing a specified amount of currency."""

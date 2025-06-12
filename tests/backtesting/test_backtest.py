@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 import pytest
 from hypothesis import given
@@ -113,31 +112,18 @@ def some_risk_config(draw) -> RiskConfig:
     )
 
 
-@composite
-def some_portfolio(draw) -> Portfolio:
-    return Portfolio(
-        starting_date=datetime(2020, 1, 1),
-        starting_asset=draw(some.integers(min_value=0, max_value=1_000_000)),
-        starting_currency=draw(some.integers(min_value=0, max_value=1_000_000)),
-    )
-
-
 @given(
     some_signals(),
     some_risk_config(),
-    some_portfolio(),
 )
-def test_process_signals_trades_property(
-    request, signals: list[Signal], risk_config: RiskConfig, initial_portfolio: Portfolio
-):
+def test_process_signals_trades_property(request, signals: list[Signal], risk_config: RiskConfig):
     """Check that trades are correctly generated from signals."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
-    trades, _ = process_signals(
+    trades = process_signals(
         signals=signals,
         risk_config=risk_config,
         fluctuations=fluctuations,
-        initial_portfolio=initial_portfolio,
     )
 
     # we don't trade when there is no capital, so we can have less trades than entry signals.
@@ -149,27 +135,23 @@ def test_process_signals_trades_property(
 @given(
     some_signals(),
     some_risk_config(),
-    some_portfolio(),
 )
-def test_process_signals_portfolio_property(
-    request, signals: list[Signal], risk_config: RiskConfig, initial_portfolio: Portfolio
-):
-    """Check the portfolio state after signals are processed."""
+def test_process_signals_portfolio_validity(request, signals: list[Signal], risk_config: RiskConfig):
+    """Check that portfolio state remains valid throughout the backtest."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
-    trades, portfolio = process_signals(
-        signals=signals, risk_config=risk_config, fluctuations=fluctuations, initial_portfolio=initial_portfolio
-    )
+    trades = process_signals(signals=signals, risk_config=risk_config, fluctuations=fluctuations)
 
-    # every trade gets closed during the trading session, so the asset volume is unchanged
-    initial_asset_volume = initial_portfolio.get_asset_volume_at(fluctuations.candles[0].open_time)
-    final_asset_volume = portfolio.get_asset_volume_at(fluctuations.candles[-1].close_time)
-    assert initial_asset_volume == pytest.approx(final_asset_volume)
+    if trades:
+        portfolio = Portfolio(starting_date=trades[0].open_date)
+        for trade in trades:
+            portfolio.update_from_trade(trade)
 
-    initial_currency_amount = initial_portfolio.get_available_capital_at(fluctuations.candles[0].open_time)
-    final_currency_amount = portfolio.get_available_capital_at(fluctuations.candles[-1].close_time)
-    global_profit = sum(trade.total_profit for trade in trades)
-    assert (Decimal(str(initial_currency_amount)) + global_profit) == pytest.approx(final_currency_amount)
+        # every trade gets closed during the trading session, so the asset volume is the initial value
+        assert portfolio.get_asset_volume_at(trades[-1].close_date) == Portfolio.default_asset_amount()
+        assert portfolio.get_available_capital_at(trades[-1].close_date) == portfolio.default_currency_amount() + sum(
+            trade.total_profit for trade in trades
+        )
 
-    assert all(item.currency >= 0 for item in portfolio.wealth_series.items)
-    assert all(item.asset >= 0 for item in portfolio.wealth_series.items)
+        assert all(item.currency >= 0 for item in portfolio.wealth_series.items)
+        assert all(item.asset >= 0 for item in portfolio.wealth_series.items)
