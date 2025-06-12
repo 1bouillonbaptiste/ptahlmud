@@ -113,23 +113,11 @@ def some_risk_config(draw) -> RiskConfig:
     )
 
 
-@composite
-def some_portfolio(draw) -> Portfolio:
-    return Portfolio(
-        starting_date=datetime(2020, 1, 1),
-        starting_asset=draw(some.integers(min_value=0, max_value=1_000_000)),
-        starting_currency=draw(some.integers(min_value=0, max_value=1_000_000)),
-    )
-
-
 @given(
     some_signals(),
     some_risk_config(),
-    some_portfolio(),
 )
-def test_process_signals_trades_property(
-    request, signals: list[Signal], risk_config: RiskConfig, initial_portfolio: Portfolio
-):
+def test_process_signals_trades_property(request, signals: list[Signal], risk_config: RiskConfig):
     """Check that trades are correctly generated from signals."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
@@ -137,7 +125,7 @@ def test_process_signals_trades_property(
         signals=signals,
         risk_config=risk_config,
         fluctuations=fluctuations,
-        initial_portfolio=initial_portfolio,
+        initial_portfolio=Portfolio(starting_date=datetime(2020, 1, 1)),
     )
 
     # we don't trade when there is no capital, so we can have less trades than entry signals.
@@ -149,14 +137,12 @@ def test_process_signals_trades_property(
 @given(
     some_signals(),
     some_risk_config(),
-    some_portfolio(),
 )
-def test_process_signals_portfolio_property(
-    request, signals: list[Signal], risk_config: RiskConfig, initial_portfolio: Portfolio
-):
+def test_process_signals_portfolio_property(request, signals: list[Signal], risk_config: RiskConfig):
     """Check the portfolio state after signals are processed."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
+    initial_portfolio = Portfolio(starting_date=datetime(2020, 1, 1))
     trades, portfolio = process_signals(
         signals=signals, risk_config=risk_config, fluctuations=fluctuations, initial_portfolio=initial_portfolio
     )

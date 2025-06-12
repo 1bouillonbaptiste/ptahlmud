@@ -46,11 +46,7 @@ risk_config = RiskConfig(
 )
 
 # Initialize portfolio
-initial_portfolio = Portfolio(
-    starting_date=datetime(2023, 1, 1),
-    starting_asset=0,
-    starting_currency=10_000,
-)
+initial_portfolio = Portfolio(starting_date=datetime(2023, 1, 1))
 
 # Load market data (you'll need to implement this for your data source)
 fluctuations: Fluctuations = load_your_market_data(...)
