@@ -44,8 +44,6 @@ def candle() -> Candle:
         high=110,
         low=90,
         close=100,
-        volume=50,
-        total_trades=1,
     )
 
 

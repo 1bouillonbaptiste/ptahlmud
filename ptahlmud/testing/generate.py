@@ -47,7 +47,6 @@ def generate_candles(
     opens = np.array([initial_close, *closes[:-1].tolist()])
     highs = (1 + high_diffs) * np.max([closes, opens], axis=0)
     lows = (1 - low_diffs) * np.min([closes, opens], axis=0)
-    volumes = (np.random.beta(a=2, b=2, size=size) / 2 + 0.25) * 1000
     open_dates = [initial_open_time + ii * period.to_timedelta() for ii in range(size)]
     close_dates = [open_date + period.to_timedelta() for open_date in open_dates]
 
@@ -57,15 +56,13 @@ def generate_candles(
             high=round(float(high_price), 3),
             low=round(float(low_price), 3),
             close=round(float(close_price), 3),
-            volume=round(float(volume), 3),
-            total_trades=1,
             open_time=open_time,
             close_time=close_time,
             high_time=None,
             low_time=None,
         )
-        for open_price, high_price, low_price, close_price, volume, open_time, close_time in zip(
-            opens, highs, lows, closes, volumes, open_dates, close_dates, strict=False
+        for open_price, high_price, low_price, close_price, open_time, close_time in zip(
+            opens, highs, lows, closes, open_dates, close_dates, strict=False
         )
     ]
     return candles

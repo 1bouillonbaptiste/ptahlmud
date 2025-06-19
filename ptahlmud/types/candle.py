@@ -24,8 +24,6 @@ class Candle:
         close: price the candle closed at.
         open_time: time the candle opened.
         close_time: time the candle closed.
-        volume: total asset volume traded during the candle activity
-        total_trades: number of trades during the candle activity
         high_time: time the candle reached its highest point.
         low_time: time the candle reached its lowest point.
 
@@ -35,9 +33,6 @@ class Candle:
     high: float
     low: float
     close: float
-
-    volume: float
-    total_trades: int
 
     open_time: datetime.datetime
     close_time: datetime.datetime
@@ -51,8 +46,6 @@ class Candle:
         _check_positive(self.high)
         _check_positive(self.low)
         _check_positive(self.close)
-        _check_positive(self.volume)
-        _check_positive(self.total_trades)
 
         if self.low > self.open:
             raise ValueError("`low` price must be lower than `open` price.")
