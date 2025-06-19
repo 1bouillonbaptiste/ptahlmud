@@ -44,14 +44,14 @@ risk_config = RiskConfig(
     stop_loss=0.03,    # Cut losses at 3% price decrease
 )
 
-# Load market data (you'll need to implement this for your data source)
-fluctuations: Fluctuations = load_your_market_data(...)
+# You will need to implement this for your data source
+candles = generate_candles(from_date=datetime(2023, 1, 1), to_date=datetime(2023, 3, 1))
 
 # Run the backtest
 trades = process_signals(
     signals=signals,
     risk_config=risk_config,
-    fluctuations=fluctuations,
+    candles=candles,
 )
 
 # Analyze results
