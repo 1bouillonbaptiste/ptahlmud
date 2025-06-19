@@ -16,7 +16,6 @@ from ptahlmud.backtesting.operations import (
     calculate_trade,
 )
 from ptahlmud.backtesting.position import Position, Trade
-from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.period import Period
@@ -131,12 +130,12 @@ def test__get_position_exit_signal(position: Position, current_candle: Candle, e
 
 
 @composite
-def some_fluctuations(draw) -> Fluctuations:
+def some_candles(draw) -> CandleCollection:
     total_candles = some.integers(min_value=10, max_value=100)
 
     period = Period(timeframe="1m")
     candles: list[Candle] = generate_candles(size=draw(total_candles), period=period)
-    return Fluctuations(candles=candles, period=period)
+    return CandleCollection(candles=candles)
 
 
 @composite
@@ -147,16 +146,16 @@ def some_target(draw):
 
 
 @given(
-    some_fluctuations(),
+    some_candles(),
     some_target(),
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
-def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
-    entry_candle: Candle = fluctuations.candles[0]
+def test_calculate_trade_target_properties(candles: CandleCollection, target: BarrierLevels, side: Side):
+    entry_candle = candles.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
-        candles=CandleCollection(fluctuations.candles),
+        candles=candles,
         target=target,
         side=side,
     )
@@ -168,42 +167,42 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: B
     assert trade.lower_barrier == pytest.approx(lower_barrier)
 
     # if trade reached target, the last candle contains high > higher target and / or low < lower target
-    candles_during_trade = fluctuations.subset(from_date=trade.open_date, to_date=trade.close_date).candles[:-1]
+    candles_during_trade = candles.subset(from_date=trade.open_date, to_date=trade.close_date).candles[:-1]
 
     assert all(candle.high < higher_barrier for candle in candles_during_trade)
     assert all(candle.low > lower_barrier for candle in candles_during_trade)
 
 
 @given(
-    some_fluctuations(),
+    some_candles(),
     some_target(),
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
-def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
-    entry_candle: Candle = fluctuations.candles[0]
+def test_calculate_trade_temporal_properties(candles: CandleCollection, target: BarrierLevels, side: Side):
+    entry_candle: Candle = candles.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
-        candles=CandleCollection(fluctuations.candles),
+        candles=candles,
         target=target,
         side=side,
     )
     assert trade.open_date == entry_candle.close_time
     assert trade.close_date > trade.open_date
-    assert trade.close_date <= fluctuations.candles[-1].close_time
+    assert trade.close_date <= candles.candles[-1].close_time
 
 
 @given(
-    some_fluctuations(),
+    some_candles(),
     some_target(),
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
-def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
-    entry_candle: Candle = fluctuations.candles[0]
+def test_calculate_trade_return_properties(candles: CandleCollection, target: BarrierLevels, side: Side):
+    entry_candle: Candle = candles.candles[0]
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
-        candles=CandleCollection(fluctuations.candles),
+        candles=candles,
         target=target,
         side=side,
     )
