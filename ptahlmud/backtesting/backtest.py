@@ -4,7 +4,7 @@ This module converts trading signals into executed trades by simulating
 market interactions according to risk management rules. It handles:
 
 1. Signal matching (pairing entry and exit signals)
-2. Risk management (position sizing, take-profit and stop-loss levels)
+2. Risk management (position sizing, time constraint, take-profit and stop-loss levels)
 3. Trade simulation (calculating exact entry/exit points and results)
 4. Portfolio tracking (recording changes in capital and asset holdings)
 
@@ -36,11 +36,13 @@ class RiskConfig(BaseModel):
         size: the fraction of available capital to allocate to each trade
         take_profit: the price increase percentage that triggers profit-taking
         stop_loss: the price decrease percentage that triggers loss-cutting
+        max_depth: the maximum number of candles to leave a trade opened
     """
 
     size: float
     take_profit: float
     stop_loss: float
+    max_depth: int
 
 
 @dataclass
@@ -130,7 +132,7 @@ def process_signals(
         the portfolio after trading session
     """
     candles_collection = CandleCollection(candles=sorted(candles, key=lambda c: c.open_time))
-    portfolio = Portfolio(starting_date=candles_collection.candles[0].open_time)
+    portfolio = Portfolio(starting_date=candles_collection.first_opening_date())
     trades: list[Trade] = []
     trade_size = Decimal(str(risk_config.size))
     for match in _match_signals(signals):
@@ -141,7 +143,9 @@ def process_signals(
         if match.entry.date >= candles_collection.first_opening_date():
             continue
 
-        candles_subset = candles_collection.subset(from_date=match.entry.date, to_date=match.exit_date)
+        candles_subset = candles_collection.subset(from_date=match.entry.date, to_date=match.exit_date).first_candles(
+            risk_config.max_depth
+        )
         new_trade = calculate_trade(
             open_at=match.entry.date,
             money_to_invest=available_capital * trade_size,

@@ -44,6 +44,10 @@ class CandleCollection:
             candles=candles,
         )
 
+    def first_candles(self, n: int) -> "CandleCollection":
+        """Return the first `n` candles as a new collection."""
+        return CandleCollection(candles=self.candles[:n])
+
 
 def _get_lower_bound_index(date: datetime, candles: list[Candle]) -> int:
     """Find the index of the candle containing `date`."""
