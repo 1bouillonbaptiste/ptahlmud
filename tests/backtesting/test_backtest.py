@@ -123,7 +123,7 @@ def test_process_signals_trades_property(request, signals: list[Signal], risk_co
     trades = process_signals(
         signals=signals,
         risk_config=risk_config,
-        fluctuations=fluctuations,
+        candles=fluctuations.candles,
     )
 
     # we don't trade when there is no capital, so we can have less trades than entry signals.
@@ -137,10 +137,10 @@ def test_process_signals_trades_property(request, signals: list[Signal], risk_co
     some_risk_config(),
 )
 def test_process_signals_portfolio_validity(request, signals: list[Signal], risk_config: RiskConfig):
-    """Check that portfolio state remains valid throughout the backtest."""
+    """Check that the portfolio state remains valid throughout the backtest."""
     # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
     fluctuations = request.getfixturevalue("random_fluctuations")
-    trades = process_signals(signals=signals, risk_config=risk_config, fluctuations=fluctuations)
+    trades = process_signals(signals=signals, risk_config=risk_config, candles=fluctuations.candles)
 
     if trades:
         portfolio = Portfolio(starting_date=trades[0].open_date)
@@ -149,8 +149,9 @@ def test_process_signals_portfolio_validity(request, signals: list[Signal], risk
 
         # every trade gets closed during the trading session, so the asset volume is the initial value
         assert portfolio.get_asset_volume_at(trades[-1].close_date) == Portfolio.default_asset_amount()
-        assert portfolio.get_available_capital_at(trades[-1].close_date) == portfolio.default_currency_amount() + sum(
-            trade.total_profit for trade in trades
+        total_profit = sum(trade.total_profit for trade in trades)
+        assert portfolio.get_available_capital_at(trades[-1].close_date) == pytest.approx(
+            portfolio.default_currency_amount() + total_profit
         )
 
         assert all(item.currency >= 0 for item in portfolio.wealth_series.items)

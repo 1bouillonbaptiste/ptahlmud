@@ -9,6 +9,7 @@ from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
+from ptahlmud.backtesting.models.candle_collection import CandleCollection
 from ptahlmud.backtesting.models.exit_signal import ExitSignal
 from ptahlmud.backtesting.operations import (
     _get_position_exit_signal,
@@ -155,7 +156,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: B
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
-        fluctuations=fluctuations,
+        candles=CandleCollection(fluctuations.candles),
         target=target,
         side=side,
     )
@@ -183,7 +184,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
-        fluctuations=fluctuations,
+        candles=CandleCollection(fluctuations.candles),
         target=target,
         side=side,
     )
@@ -202,7 +203,7 @@ def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: B
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
-        fluctuations=fluctuations,
+        candles=CandleCollection(fluctuations.candles),
         target=target,
         side=side,
     )

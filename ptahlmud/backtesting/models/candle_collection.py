@@ -1,21 +1,13 @@
-"""Define a `Fluctuations` entity.
-
-Financial time-series are often represented as candle collections, as known as **fluctuations**.
-"""
-
-import dataclasses
 from datetime import datetime
 
-from ptahlmud.types.candle import Candle
-from ptahlmud.types.period import Period
+from ptahlmud.types import Candle
 
 
-@dataclasses.dataclass
-class Fluctuations:
-    """Represent financial fluctuations."""
+class CandleCollection:
+    """Represent a collection of `Candle` objects."""
 
-    candles: list[Candle]
-    period: Period
+    def __init__(self, candles: list[Candle]):
+        self.candles = candles
 
     @property
     def size(self) -> int:
@@ -27,8 +19,8 @@ class Fluctuations:
         index = _get_lower_bound_index(date=date, candles=self.candles)
         return self.candles[index]
 
-    def subset(self, from_date: datetime | None = None, to_date: datetime | None = None) -> "Fluctuations":
-        """Return a subset of object candles."""
+    def subset(self, from_date: datetime | None = None, to_date: datetime | None = None) -> "CandleCollection":
+        """Retrieves candles within a specified date range, inclusive of both endpoints."""
         if (from_date is None) and (to_date is None):
             return self
         if from_date is None:
@@ -40,9 +32,8 @@ class Fluctuations:
         candles = self.candles[from_index:to_index]
         if candles and (candles[-1].open_time == to_date):
             candles.pop()
-        return Fluctuations(
+        return CandleCollection(
             candles=candles,
-            period=self.period,
         )
 
 
