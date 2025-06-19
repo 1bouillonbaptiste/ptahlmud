@@ -10,8 +10,8 @@ from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.candle_collection import CandleCollection
-from ptahlmud.backtesting.models.exit_signal import ExitMode
 from ptahlmud.backtesting.operations import (
+    ExitMode,
     _get_position_exit_mode,
     calculate_trade,
 )

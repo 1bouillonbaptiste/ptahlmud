@@ -1,12 +1,67 @@
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.candle_collection import CandleCollection
-from ptahlmud.backtesting.models.exit_signal import ExitMode
 from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
+
+
+@dataclass(slots=True)
+class ExitMode:
+    """Define the exit mode of a position.
+
+    In trading systems, positions are closed and converted into trades when they reach target or with manual closing.
+    An exit mode determines both when and at what price a position should be closed.
+
+    Exit mode can represent:
+    1. Take profit scenarios (when price reaches the higher barrier)
+    2. Stop loss scenarios (when the price reaches the lower barrier)
+    3. Time-based closes (at candle close time)
+    4. Hold instructions (maintain the position)
+
+    This class combines two information:
+    * price information - which price to use for exiting the market
+    * time information - at which time the position must be closed.
+
+    """
+
+    price_signal: Literal["high_barrier", "low_barrier", "close", "hold"]
+    date_signal: Literal["high", "low", "close", "hold"]
+
+    @property
+    def hold_position(self) -> bool:
+        return (self.price_signal == "hold") or (self.date_signal == "hold")
+
+    def to_price_date(self, position: Position, candle: Candle) -> tuple[Decimal, datetime]:
+        """Convert a signal to price ad date values."""
+
+        match self.price_signal:
+            case "high_barrier":
+                price = position.higher_barrier
+            case "low_barrier":
+                price = position.lower_barrier
+            case "close":
+                price = Decimal(str(candle.close))
+            case "hold":
+                price = Decimal(0)
+        match self.date_signal:
+            case "high":
+                date = candle.high_time
+                if date is None:
+                    raise ValueError("Candle has no high time.")
+            case "low":
+                date = candle.low_time
+                if date is None:
+                    raise ValueError("Candle has no low time.")
+            case "close":
+                date = candle.close_time
+            case "hold":
+                date = datetime(1900, 1, 1)
+        return price, date  # noqa: price and date are always set
 
 
 def _get_position_exit_mode(position: Position, candle: Candle) -> ExitMode:
