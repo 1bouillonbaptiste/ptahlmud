@@ -15,8 +15,6 @@ def default_parameters():
         "close": 1,
         "open_time": datetime.datetime(2020, 1, 1),
         "close_time": datetime.datetime(2020, 1, 2),
-        "volume": 1,
-        "total_trades": 1,
     }
 
 
@@ -45,10 +43,10 @@ class TestCandleFailingCases:
         return default_parameters | {"close": -1}, "Found negative number."
 
     def case_negative_volume(self, default_parameters):
-        return default_parameters | {"volume": -1}, "Found negative number."
+        return default_parameters | {"close": -1}, "Found negative number."
 
     def case_negative_total_trades(self, default_parameters):
-        return default_parameters | {"total_trades": -1}, "Found negative number."
+        return default_parameters | {"close": -1}, "Found negative number."
 
     def case_high_lower_than_open(self, default_parameters):
         return default_parameters | {"high": 0.5}, "`high` price must be higher than `open` price."
