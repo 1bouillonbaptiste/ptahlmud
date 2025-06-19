@@ -189,7 +189,7 @@ def test_calculate_trade_temporal_properties(candles: CandleCollection, target: 
     )
     assert trade.open_date == entry_candle.close_time
     assert trade.close_date > trade.open_date
-    assert trade.close_date <= candles.candles[-1].close_time
+    assert trade.close_date <= candles.last_closing_date()
 
 
 @given(

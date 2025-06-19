@@ -14,6 +14,14 @@ class CandleCollection:
         """Number of candles in the collection."""
         return len(self.candles)
 
+    def first_opening_date(self) -> datetime:
+        """Return the first candle's opening date."""
+        return self.candles[0].open_time
+
+    def last_closing_date(self) -> datetime:
+        """Return the last candle's closing date."""
+        return self.candles[-1].close_time
+
     def get_candle_at(self, date: datetime) -> Candle:
         """Return the candle containing `date`."""
         index = _get_lower_bound_index(date=date, candles=self.candles)
@@ -24,9 +32,9 @@ class CandleCollection:
         if (from_date is None) and (to_date is None):
             return self
         if from_date is None:
-            from_date = self.candles[0].open_time
+            from_date = self.first_opening_date()
         if to_date is None:
-            to_date = self.candles[-1].close_time
+            to_date = self.last_closing_date()
         from_index = _get_lower_bound_index(date=from_date, candles=self.candles)
         to_index = _get_lower_bound_index(date=to_date, candles=self.candles) + 1
         candles = self.candles[from_index:to_index]

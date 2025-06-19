@@ -131,7 +131,6 @@ def process_signals(
     """
     candles_collection = CandleCollection(candles=sorted(candles, key=lambda c: c.open_time))
     portfolio = Portfolio(starting_date=candles_collection.candles[0].open_time)
-    fluctuations_end_time = candles_collection.candles[-1].open_time
     trades: list[Trade] = []
     trade_size = Decimal(str(risk_config.size))
     for match in _match_signals(signals):
@@ -139,7 +138,7 @@ def process_signals(
         if available_capital == 0:
             continue
 
-        if match.entry.date >= fluctuations_end_time:
+        if match.entry.date >= candles_collection.first_opening_date():
             continue
 
         candles_subset = candles_collection.subset(from_date=match.entry.date, to_date=match.exit_date)
