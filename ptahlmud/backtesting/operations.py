@@ -3,13 +3,13 @@ from decimal import Decimal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.candle_collection import CandleCollection
-from ptahlmud.backtesting.models.exit_signal import ExitSignal
+from ptahlmud.backtesting.models.exit_signal import ExitMode
 from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
 
 
-def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
+def _get_position_exit_mode(position: Position, candle: Candle) -> ExitMode:
     """Check if a candle reaches position to take profit or stop loss."""
     price_reach_tp = candle.high >= position.higher_barrier
     price_reach_sl = candle.low <= position.lower_barrier
@@ -17,23 +17,23 @@ def _get_position_exit_signal(position: Position, candle: Candle) -> ExitSignal:
     if price_reach_tp and price_reach_sl:  # candle's price range is very wide, check which bound was reached first
         if (candle.high_time is not None) and (candle.low_time is not None):
             if candle.high_time < candle.low_time:  # price reached high before low
-                return ExitSignal(price_signal="high_barrier", date_signal="high")
+                return ExitMode(price_signal="high_barrier", date_signal="high")
             else:  # price reached low before high
-                return ExitSignal(price_signal="low_barrier", date_signal="low")
+                return ExitMode(price_signal="low_barrier", date_signal="low")
         else:  # we don't have granularity, assume close price is close enough to real sell price
-            return ExitSignal(price_signal="close", date_signal="close")
+            return ExitMode(price_signal="close", date_signal="close")
     elif price_reach_tp:
-        return ExitSignal(
+        return ExitMode(
             price_signal="high_barrier",
             date_signal="high" if candle.high_time else "close",
         )
     elif price_reach_sl:
-        return ExitSignal(
+        return ExitMode(
             price_signal="low_barrier",
             date_signal="low" if candle.low_time else "close",
         )
 
-    return ExitSignal(price_signal="hold", date_signal="hold")
+    return ExitMode(price_signal="hold", date_signal="hold")
 
 
 def _close_position(position: Position, candles: CandleCollection) -> Trade:
@@ -62,7 +62,7 @@ def _close_position(position: Position, candles: CandleCollection) -> Trade:
         )
 
     for candle in candles_subset.candles:
-        signal = _get_position_exit_signal(position=position, candle=candle)
+        signal = _get_position_exit_mode(position=position, candle=candle)
 
         if not signal.hold_position:
             close_price, close_date = signal.to_price_date(position=position, candle=candle)
