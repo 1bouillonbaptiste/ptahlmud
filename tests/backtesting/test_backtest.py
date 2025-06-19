@@ -73,7 +73,7 @@ def test__match_signals(signals: list[Signal], expected_matches: list[MatchedSig
 
 @composite
 def random_signal(draw) -> Signal:
-    date = draw(some.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2020, 1, 1, minute=58)))
+    date = draw(some.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2020, 1, 1, hour=5, minute=58)))
     side = draw(some.sampled_from(list(Side.__members__)))
     action = draw(some.sampled_from(list(Action.__members__)))
     return Signal(date=date, side=side, action=action)
@@ -112,7 +112,7 @@ def test_process_signals_trades_property(signals: list[Signal], risk_config: Ris
     """Check that trades are correctly generated from signals."""
     period = Period(timeframe="1m")
     random_candles = generate_candles(
-        from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=1), period=period
+        from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=6), period=period
     )
     trades = process_signals(
         signals=signals,
@@ -136,7 +136,7 @@ def test_process_signals_trades_property(signals: list[Signal], risk_config: Ris
 def test_process_signals_portfolio_validity(signals: list[Signal], risk_config: RiskConfig):
     """Check that the portfolio state remains valid throughout the backtest."""
     random_candles = generate_candles(
-        from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=1), period=Period(timeframe="1m")
+        from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=6), period=Period(timeframe="1m")
     )
     trades = process_signals(signals=signals, risk_config=risk_config, candles=random_candles)
 
