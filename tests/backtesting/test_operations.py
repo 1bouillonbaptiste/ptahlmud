@@ -10,9 +10,9 @@ from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.candle_collection import CandleCollection
-from ptahlmud.backtesting.models.exit_signal import ExitSignal
 from ptahlmud.backtesting.operations import (
-    _get_position_exit_signal,
+    ExitMode,
+    _get_position_exit_mode,
     calculate_trade,
 )
 from ptahlmud.backtesting.position import Position, Trade
@@ -47,7 +47,7 @@ def candle() -> Candle:
     )
 
 
-class GetPositionExitSignalCases:
+class GetPositionExitModeCases:
     """Generate cases for `_get_position_exit_signal()`.
 
     Each case returns:
@@ -58,7 +58,7 @@ class GetPositionExitSignalCases:
 
     def case_hold(self, fake_position, candle):
         """Position has no security, don't close it."""
-        return fake_position, candle, ExitSignal(price_signal="hold", date_signal="hold")
+        return fake_position, candle, ExitMode(price_signal="hold", date_signal="hold")
 
     def case_higher_barrier_at_high_time(self, fake_position, candle):
         high_time = datetime(2024, 8, 25, hour=12)
@@ -66,7 +66,7 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, higher_barrier=110),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="high_barrier", date_signal="high"),
+            ExitMode(price_signal="high_barrier", date_signal="high"),
         )
 
     def case_lower_barrier_at_low_time(self, fake_position, candle):
@@ -75,7 +75,7 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, lower_barrier=95),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="low_barrier", date_signal="low"),
+            ExitMode(price_signal="low_barrier", date_signal="low"),
         )
 
     def case_exit_undefined_time(self, fake_position, candle):
@@ -83,7 +83,7 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, higher_barrier=105, lower_barrier=95),
             candle,
-            ExitSignal(price_signal="close", date_signal="close"),
+            ExitMode(price_signal="close", date_signal="close"),
         )
 
     def case_higher_barrier_undefined_time(self, fake_position, candle):
@@ -91,7 +91,7 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, higher_barrier=105),
             candle,
-            ExitSignal(price_signal="high_barrier", date_signal="close"),
+            ExitMode(price_signal="high_barrier", date_signal="close"),
         )
 
     def case_lower_barrier_undefined_time(self, fake_position, candle):
@@ -99,7 +99,7 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, lower_barrier=95),
             candle,
-            ExitSignal(price_signal="low_barrier", date_signal="close"),
+            ExitMode(price_signal="low_barrier", date_signal="close"),
         )
 
     def case_tp_before_sl(self, fake_position, candle):
@@ -108,7 +108,7 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, higher_barrier=105, lower_barrier=95),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="high_barrier", date_signal="high"),
+            ExitMode(price_signal="high_barrier", date_signal="high"),
         )
 
     def case_sl_before_tp(self, fake_position, candle):
@@ -117,13 +117,13 @@ class GetPositionExitSignalCases:
         return (
             replace(fake_position, higher_barrier=105, lower_barrier=95),
             replace(candle, high_time=high_time, low_time=low_time),
-            ExitSignal(price_signal="low_barrier", date_signal="low"),
+            ExitMode(price_signal="low_barrier", date_signal="low"),
         )
 
 
-@parametrize_with_cases("position, current_candle, expected_signal", cases=GetPositionExitSignalCases)
-def test__get_position_exit_signal(position: Position, current_candle: Candle, expected_signal: ExitSignal):
-    signal = _get_position_exit_signal(position, current_candle)
+@parametrize_with_cases("position, current_candle, expected_signal", cases=GetPositionExitModeCases)
+def test__get_position_exit_mode(position: Position, current_candle: Candle, expected_signal: ExitMode):
+    signal = _get_position_exit_mode(position, current_candle)
     assert signal == expected_signal
 
 
