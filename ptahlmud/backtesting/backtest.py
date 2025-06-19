@@ -18,10 +18,11 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from ptahlmud.backtesting.models.candle_collection import CandleCollection
 from ptahlmud.backtesting.operations import BarrierLevels, calculate_trade
 from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.backtesting.position import Trade
-from ptahlmud.entities.fluctuations import Fluctuations
+from ptahlmud.types import Candle
 from ptahlmud.types.signal import Action, Side, Signal
 
 
@@ -115,21 +116,21 @@ def _create_target(match: MatchedSignal, risk_config: RiskConfig) -> BarrierLeve
 def process_signals(
     signals: list[Signal],
     risk_config: RiskConfig,
-    fluctuations: Fluctuations,
+    candles: list[Candle],
 ) -> list[Trade]:
     """Process trading signals to generate trades and track portfolio changes.
 
     Args:
         signals: trading signals
         risk_config: risk management parameters
-        fluctuations: market data
+        candles: candles representing the market evolution during the trading session
 
     Returns:
         executed trades as a list
         the portfolio after trading session
     """
-    portfolio = Portfolio(starting_date=fluctuations.candles[0].open_time)
-    fluctuations_end_time = fluctuations.candles[-1].open_time
+    candles_collection = CandleCollection(candles=sorted(candles, key=lambda c: c.open_time))
+    portfolio = Portfolio(starting_date=candles_collection.candles[0].open_time)
     trades: list[Trade] = []
     trade_size = Decimal(str(risk_config.size))
     for match in _match_signals(signals):
@@ -137,14 +138,14 @@ def process_signals(
         if available_capital == 0:
             continue
 
-        if match.entry.date >= fluctuations_end_time:
+        if match.entry.date >= candles_collection.first_opening_date():
             continue
 
-        fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date)
+        candles_subset = candles_collection.subset(from_date=match.entry.date, to_date=match.exit_date)
         new_trade = calculate_trade(
             open_at=match.entry.date,
             money_to_invest=available_capital * trade_size,
-            fluctuations=fluctuations_subset,
+            candles=candles_subset,
             target=_create_target(match=match, risk_config=risk_config),
             side=match.entry.side,
         )

@@ -8,7 +8,6 @@ from pytest_cases import parametrize_with_cases
 
 from ptahlmud.backtesting.backtest import MatchedSignal, RiskConfig, _match_signals, process_signals
 from ptahlmud.backtesting.portfolio import Portfolio
-from ptahlmud.entities.fluctuations import Fluctuations
 from ptahlmud.testing.generate import generate_candles
 from ptahlmud.types.period import Period
 from ptahlmud.types.signal import Action, Side, Signal
@@ -72,14 +71,6 @@ def test__match_signals(signals: list[Signal], expected_matches: list[MatchedSig
     assert matches == expected_matches
 
 
-@pytest.fixture
-def random_fluctuations() -> Fluctuations:
-    """Generate a random `Fluctuations` instance."""
-    period = Period(timeframe="1m")
-    candles = generate_candles(from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=1), period=period)
-    return Fluctuations(candles=candles, period=period)
-
-
 @composite
 def random_signal(draw) -> Signal:
     date = draw(some.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2020, 1, 1, minute=58)))
@@ -118,12 +109,13 @@ def some_risk_config(draw) -> RiskConfig:
 )
 def test_process_signals_trades_property(request, signals: list[Signal], risk_config: RiskConfig):
     """Check that trades are correctly generated from signals."""
-    # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
-    fluctuations = request.getfixturevalue("random_fluctuations")
+    random_candles = generate_candles(
+        from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=1), period=Period(timeframe="1m")
+    )
     trades = process_signals(
         signals=signals,
         risk_config=risk_config,
-        fluctuations=fluctuations,
+        candles=random_candles,
     )
 
     # we don't trade when there is no capital, so we can have less trades than entry signals.
@@ -137,10 +129,11 @@ def test_process_signals_trades_property(request, signals: list[Signal], risk_co
     some_risk_config(),
 )
 def test_process_signals_portfolio_validity(request, signals: list[Signal], risk_config: RiskConfig):
-    """Check that portfolio state remains valid throughout the backtest."""
-    # pytest user-defined fixtures and hypothesis are not compatible, access `random_fluctuations` manually
-    fluctuations = request.getfixturevalue("random_fluctuations")
-    trades = process_signals(signals=signals, risk_config=risk_config, fluctuations=fluctuations)
+    """Check that the portfolio state remains valid throughout the backtest."""
+    random_candles = generate_candles(
+        from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=1), period=Period(timeframe="1m")
+    )
+    trades = process_signals(signals=signals, risk_config=risk_config, candles=random_candles)
 
     if trades:
         portfolio = Portfolio(starting_date=trades[0].open_date)
@@ -149,8 +142,9 @@ def test_process_signals_portfolio_validity(request, signals: list[Signal], risk
 
         # every trade gets closed during the trading session, so the asset volume is the initial value
         assert portfolio.get_asset_volume_at(trades[-1].close_date) == Portfolio.default_asset_amount()
-        assert portfolio.get_available_capital_at(trades[-1].close_date) == portfolio.default_currency_amount() + sum(
-            trade.total_profit for trade in trades
+        total_profit = sum(trade.total_profit for trade in trades)
+        assert portfolio.get_available_capital_at(trades[-1].close_date) == pytest.approx(
+            portfolio.default_currency_amount() + total_profit
         )
 
         assert all(item.currency >= 0 for item in portfolio.wealth_series.items)

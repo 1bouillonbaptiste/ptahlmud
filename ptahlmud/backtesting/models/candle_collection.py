@@ -1,48 +1,47 @@
-"""Define a `Fluctuations` entity.
-
-Financial time-series are often represented as candle collections, as known as **fluctuations**.
-"""
-
-import dataclasses
 from datetime import datetime
 
-from ptahlmud.types.candle import Candle
-from ptahlmud.types.period import Period
+from ptahlmud.types import Candle
 
 
-@dataclasses.dataclass
-class Fluctuations:
-    """Represent financial fluctuations."""
+class CandleCollection:
+    """Represent a collection of `Candle` objects."""
 
-    candles: list[Candle]
-    period: Period
+    def __init__(self, candles: list[Candle]):
+        self.candles = candles
 
     @property
     def size(self) -> int:
         """Number of candles in the collection."""
         return len(self.candles)
 
+    def first_opening_date(self) -> datetime:
+        """Return the first candle's opening date."""
+        return self.candles[0].open_time
+
+    def last_closing_date(self) -> datetime:
+        """Return the last candle's closing date."""
+        return self.candles[-1].close_time
+
     def get_candle_at(self, date: datetime) -> Candle:
         """Return the candle containing `date`."""
         index = _get_lower_bound_index(date=date, candles=self.candles)
         return self.candles[index]
 
-    def subset(self, from_date: datetime | None = None, to_date: datetime | None = None) -> "Fluctuations":
-        """Return a subset of object candles."""
+    def subset(self, from_date: datetime | None = None, to_date: datetime | None = None) -> "CandleCollection":
+        """Retrieves candles within a specified date range, inclusive of both endpoints."""
         if (from_date is None) and (to_date is None):
             return self
         if from_date is None:
-            from_date = self.candles[0].open_time
+            from_date = self.first_opening_date()
         if to_date is None:
-            to_date = self.candles[-1].close_time
+            to_date = self.last_closing_date()
         from_index = _get_lower_bound_index(date=from_date, candles=self.candles)
         to_index = _get_lower_bound_index(date=to_date, candles=self.candles) + 1
         candles = self.candles[from_index:to_index]
         if candles and (candles[-1].open_time == to_date):
             candles.pop()
-        return Fluctuations(
+        return CandleCollection(
             candles=candles,
-            period=self.period,
         )
 
 
