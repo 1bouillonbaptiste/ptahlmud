@@ -1,19 +1,3 @@
-"""Define the `ExitSignal` class.
-
-In trading systems, positions are closed and converted into trades when they reach target or with manual closing.
-An `ExitSignal` determines both when and at what price a position should be closed.
-
-Exit signals can represent:
-1. Take profit scenarios (when price reaches the higher barrier)
-2. Stop loss scenarios (when the price reaches the lower barrier)
-3. Time-based closes (at candle close time)
-4. Hold instructions (maintain the position)
-
-The signal combines price information (which price level to use) with timing information
-(at which point in the candle's timeline to execute the close).
-
-"""
-
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -25,7 +9,21 @@ from ptahlmud.types.candle import Candle
 
 @dataclass(slots=True)
 class ExitSignal:
-    """Represent an exit signal."""
+    """Define the `ExitSignal` class.
+
+    In trading systems, positions are closed and converted into trades when they reach target or with manual closing.
+    An `ExitSignal` determines both when and at what price a position should be closed.
+
+    Exit signals can represent:
+    1. Take profit scenarios (when price reaches the higher barrier)
+    2. Stop loss scenarios (when the price reaches the lower barrier)
+    3. Time-based closes (at candle close time)
+    4. Hold instructions (maintain the position)
+
+    The signal combines price information (which price level to use) with timing information
+    (at which point in the candle's timeline to execute the close).
+
+    """
 
     price_signal: Literal["high_barrier", "low_barrier", "close", "hold"]
     date_signal: Literal["high", "low", "close", "hold"]
