@@ -13,6 +13,8 @@ pydantic = ">=2.11,<3"
 numpy = ">=2.0,<3"
 pandas = ">=2.3.0,<3"
 python-binance = ">=1.0.29,<2"
+tqdm = "^4.67.1"
+types-tqdm = "^4.67.0.20250516"
 
 
 [tool.poetry.group.dev.dependencies]

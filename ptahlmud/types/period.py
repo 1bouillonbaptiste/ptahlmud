@@ -36,6 +36,10 @@ class Period:
         units_adapter = {"m": "minutes", "h": "hours", "d": "days"}
         return datetime.timedelta(**{units_adapter[self._unit]: self._value})
 
+    def __eq__(self, other) -> bool:
+        """Verify two periods represent the same timeframe."""
+        return self.to_timedelta() == other.to_timedelta()
+
 
 def _parse_timeframe(timeframe: str) -> tuple[str, int]:
     """Parse a timeframe to retrieve its time unit and value."""

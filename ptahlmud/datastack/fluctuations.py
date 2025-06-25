@@ -7,6 +7,8 @@ from datetime import datetime
 
 import pandas as pd
 
+from ptahlmud.types import Period
+
 
 class Fluctuations:
     """Interface for market fluctuations.
@@ -22,8 +24,8 @@ class Fluctuations:
             if column not in dataframe.columns:
                 raise ValueError(f"Missing column '{column}' in fluctuations.")
 
-        dataframe["open_time"] = pd.to_datetime(dataframe["open_time"])
-        dataframe["close_time"] = pd.to_datetime(dataframe["close_time"])
+        dataframe.loc[:, "open_time"] = pd.to_datetime(dataframe["open_time"])
+        dataframe.loc[:, "close_time"] = pd.to_datetime(dataframe["close_time"])
 
         dataframe.sort_values(by="open_time", ascending=True).drop_duplicates(subset=["open_time"]).reset_index(
             drop=True
@@ -49,11 +51,12 @@ class Fluctuations:
         return last_candle["close_time"].to_pydatetime()
 
     @property
-    def timeframe(self) -> str:
+    def period(self) -> Period:
         """Get the duration in minutes of fluctuations items."""
         first_candle = self.dataframe.iloc[0]
         minutes = int((first_candle["close_time"] - first_candle["open_time"]).total_seconds()) // 60
-        return str(minutes) + "m"
+        timeframe = str(minutes) + "m"
+        return Period(timeframe)
 
     def subset(self, from_date: datetime, to_date: datetime) -> "Fluctuations":
         """Create a new instance from rows within a specified date range."""

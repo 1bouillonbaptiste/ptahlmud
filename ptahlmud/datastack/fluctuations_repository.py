@@ -4,15 +4,12 @@ The repository is responsible for retrieving data from the database.
 It can also fetch missing data from a remote data provider.
 """
 
-import logging
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
 
 from ptahlmud.datastack.fluctuations import Fluctuations
-
-logger = logging.getLogger(__name__)
 
 
 class FilesMapper:
@@ -44,8 +41,6 @@ class FluctuationsRepository:
     def query(self, coin: str, currency: str, from_date: datetime, to_date: datetime) -> Fluctuations:
         """Request fluctuations from the database.
 
-        Missing fluctuations are fetched from the remote data provider.
-
         Args:
             coin: coin symbol to fetch (e.g. 'BTC' or 'ETH')
             currency: currency symbol (e.g. 'USD')
@@ -61,15 +56,17 @@ class FluctuationsRepository:
                 requested_fluctuations.append(fluctuations)
 
         if not requested_fluctuations:
-            raise ValueError(f"No fluctuations found for '{coin}/{currency}' from '{from_date}' to '{to_date}'")
+            return Fluctuations(
+                dataframe=pd.DataFrame(columns=["open", "high", "low", "close", "open_time", "close_time"])
+            )
 
-        merged_fluctuations = merge_fluctuations(requested_fluctuations)
+        merged_fluctuations = _merge_fluctuations(requested_fluctuations)
         return merged_fluctuations.subset(from_date=from_date, to_date=to_date)
 
     def _request_daily_fluctuations(self, coin: str, currency: str, date: date) -> Fluctuations | None:
         """Request fluctuations for a specific day."""
         file = self._database.find_file(coin=coin, currency=currency, date=date)
-        fluctuations = read_fluctuations(file) if file.is_file() else None
+        fluctuations = _read_fluctuations(file) if file.is_file() else None
         return fluctuations
 
     def find_incomplete_dates(self, coin: str, currency: str, from_date: datetime, to_date: datetime) -> list[datetime]:
@@ -85,9 +82,10 @@ class FluctuationsRepository:
 
     def save(self, fluctuations: Fluctuations, coin: str, currency: str) -> None:
         """Write fluctuations to the database."""
-        if fluctuations.timeframe != "1m":
+        timeframe = fluctuations.period.timeframe
+        if timeframe != "1m":
             raise ValueError(
-                f"Fluctuations repository can only save '1m' timeframes fluctuations, found '{fluctuations.timeframe}'."
+                f"Fluctuations repository can only save '1m' timeframes fluctuations, found '{timeframe}'."
             )
 
         MINUTES_IN_DAY = 60 * 24
@@ -97,21 +95,21 @@ class FluctuationsRepository:
         date = fluctuations.earliest_open_time.date()
         filepath = self._database.find_file(coin=coin, currency=currency, date=date)
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        write_fluctuations(fluctuations, filepath)
+        _write_fluctuations(fluctuations, filepath)
 
 
-def read_fluctuations(filepath: Path) -> Fluctuations:
+def _read_fluctuations(filepath: Path) -> Fluctuations:
     """Read fluctuations from a CSV file."""
     dataframe = pd.read_csv(filepath, sep=";")
     return Fluctuations(dataframe)
 
 
-def write_fluctuations(fluctuations: Fluctuations, filepath: Path) -> None:
+def _write_fluctuations(fluctuations: Fluctuations, filepath: Path) -> None:
     """Write fluctuations to a CSV file."""
     fluctuations.dataframe.to_csv(filepath, sep=";", index=False)
 
 
-def merge_fluctuations(all_fluctuations: list[Fluctuations]) -> Fluctuations:
+def _merge_fluctuations(all_fluctuations: list[Fluctuations]) -> Fluctuations:
     """Merge multiple fluctuations into a single one."""
     merged_dataframes = pd.concat([fluctuations.dataframe for fluctuations in all_fluctuations]).reset_index(drop=True)
     return Fluctuations(merged_dataframes)

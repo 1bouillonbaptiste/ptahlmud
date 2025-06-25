@@ -41,8 +41,8 @@ def test_service_request_is_empty(mocked_service):
             "timeframe": "1m",
         }
     )
-    with pytest.raises(ValueError, match="No fluctuations found for 'FAKE/NEWS' from "):
-        mocked_service.request(config)
+    fluctuations = mocked_service.request(config)
+    assert fluctuations.size == 0
 
 
 def test_service_request_incomplete_data(mocked_service):

@@ -9,11 +9,20 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 from pydantic import BaseModel
+from tqdm import tqdm
 
 from ptahlmud.datastack.clients.remote_client import RemoteClient
 from ptahlmud.datastack.fluctuations import Fluctuations
 from ptahlmud.datastack.fluctuations_repository import FluctuationsRepository
 from ptahlmud.types import Period
+
+
+@dataclass
+class DateRange:
+    """Store a range of dates."""
+
+    start_date: datetime
+    end_date: datetime
 
 
 class FluctuationsConfig(BaseModel):
@@ -51,21 +60,23 @@ class FluctuationsService:
                 to_date=config.to_date,
             )
 
-        chunks = _chunkify(
+        date_ranges = _chunkify(
             start_date=config.from_date,
             end_date=config.to_date,
             chunk_size=Period(timeframe=config.timeframe).to_timedelta(),
         )
         all_fluctuations: list[Fluctuations] = []
-        for chunk in chunks:
+        for chunk in date_ranges:
             chunk_fluctuations = self._repository.query(
                 coin=config.coin,
                 currency=config.currency,
                 from_date=chunk.start_date,
                 to_date=chunk.end_date,
             )
+            if chunk_fluctuations.size == 0:
+                continue
             chunk_fluctuations = _resume_fluctuations(chunk_fluctuations)
-            if chunk_fluctuations.timeframe == config.timeframe:
+            if chunk_fluctuations.period == Period(config.timeframe):
                 all_fluctuations.append(chunk_fluctuations)
 
         return _merge_fluctuations(all_fluctuations)
@@ -78,7 +89,7 @@ class FluctuationsService:
             from_date=config.from_date,
             to_date=config.to_date,
         )
-        for date in incomplete_dates:
+        for date in tqdm(incomplete_dates):
             fluctuations = self._client.fetch_historical_data(
                 symbol=config.coin + config.currency,
                 start_date=date,
@@ -86,14 +97,6 @@ class FluctuationsService:
                 timeframe="1m",
             )
             self._repository.save(fluctuations, coin=config.coin, currency=config.currency)
-
-
-@dataclass
-class DateRange:
-    """Store a range of dates."""
-
-    start_date: datetime
-    end_date: datetime
 
 
 def _chunkify(start_date: datetime, end_date: datetime, chunk_size: timedelta) -> list[DateRange]:
