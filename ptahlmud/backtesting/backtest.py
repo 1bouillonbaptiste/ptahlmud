@@ -18,12 +18,11 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from ptahlmud.backtesting.models.candle_collection import CandleCollection
+from ptahlmud.backtesting.models.candle import Candle, CandleCollection
+from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.operations import BarrierLevels, calculate_trade
 from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.backtesting.position import Trade
-from ptahlmud.types import Candle
-from ptahlmud.types.signal import Action, Side, Signal
 
 
 class RiskConfig(BaseModel):

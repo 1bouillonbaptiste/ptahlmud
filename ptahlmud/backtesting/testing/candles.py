@@ -4,7 +4,7 @@ from datetime import datetime
 
 import numpy as np
 
-from ptahlmud.types.candle import Candle
+from ptahlmud.backtesting.models.candle import Candle
 from ptahlmud.types.period import Period
 
 

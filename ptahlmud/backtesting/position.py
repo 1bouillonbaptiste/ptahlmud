@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from ptahlmud.types.signal import Side
+from ptahlmud.backtesting.models.signal import Side
 
 
 def _calculate_fees(investment: Decimal, fees_pct: Decimal) -> Decimal:

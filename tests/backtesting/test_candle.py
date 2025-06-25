@@ -3,7 +3,7 @@ import datetime
 import pytest
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.types.candle import Candle
+from ptahlmud.backtesting.models.candle import Candle
 
 
 @pytest.fixture
