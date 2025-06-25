@@ -17,7 +17,7 @@ from ptahlmud.backtesting.operations import (
     calculate_trade,
 )
 from ptahlmud.backtesting.position import Position, Trade
-from ptahlmud.testing.generate import generate_candles
+from ptahlmud.backtesting.testing.candles import generate_candles
 from ptahlmud.types.period import Period
 
 

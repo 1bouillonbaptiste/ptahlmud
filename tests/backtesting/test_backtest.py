@@ -9,7 +9,7 @@ from pytest_cases import parametrize_with_cases
 from ptahlmud.backtesting.backtest import MatchedSignal, RiskConfig, _match_signals, process_signals
 from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.portfolio import Portfolio
-from ptahlmud.testing.generate import generate_candles
+from ptahlmud.backtesting.testing.candles import generate_candles
 from ptahlmud.types.period import Period
 
 
