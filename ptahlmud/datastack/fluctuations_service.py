@@ -4,8 +4,11 @@ It is responsible to collect requested fluctuations.
 If the data is not in the db, it will fetch it from the remote data provider.
 """
 
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import partial
+from multiprocessing import Pool
 
 import pandas as pd
 from pydantic import BaseModel
@@ -46,12 +49,13 @@ class FluctuationsConfig(BaseModel):
 class FluctuationsService:
     """Define fluctuations service."""
 
-    def __init__(self, repository: FluctuationsRepository, client: RemoteClient):
+    def __init__(self, repository: FluctuationsRepository, client: RemoteClient | None = None):
         self._repository = repository
         self._client = client
 
     def request(self, config: FluctuationsConfig) -> Fluctuations:
-        """Retrieve fluctuations data, either from the database or from the remote data provider."""
+        """Load fluctuations from the database."""
+        # optimization, with '1m' timeframe we don't need to convert the data
         if config.timeframe == "1m":
             return self._repository.query(
                 coin=config.coin,
@@ -65,31 +69,34 @@ class FluctuationsService:
             end_date=config.to_date,
             chunk_size=Period(timeframe=config.timeframe).to_timedelta(),
         )
-        all_fluctuations: list[Fluctuations] = []
-        for chunk in date_ranges:
-            chunk_fluctuations = self._repository.query(
-                coin=config.coin,
-                currency=config.currency,
-                from_date=chunk.start_date,
-                to_date=chunk.end_date,
-            )
-            if chunk_fluctuations.size == 0:
-                continue
-            chunk_fluctuations = _resume_fluctuations(chunk_fluctuations)
-            if chunk_fluctuations.period == Period(config.timeframe):
-                all_fluctuations.append(chunk_fluctuations)
+        process_func = partial(
+            _process_chunk,
+            repository=self._repository,
+            coin=config.coin,
+            currency=config.currency,
+            timeframe=config.timeframe,
+        )
 
+        nb_processes = max((os.cpu_count() or 1) * 3 // 4, 1)
+        with Pool(processes=nb_processes) as pool:
+            # Use imap for progress tracking
+            results = list(
+                tqdm(pool.imap(process_func, date_ranges), total=len(date_ranges), desc="Loading fluctuations data")
+            )
+        all_fluctuations: list[Fluctuations] = [result for result in results if result is not None]
         return _merge_fluctuations(all_fluctuations)
 
     def fetch(self, config: FluctuationsConfig) -> None:
         """Fetch missing fluctuations data from the remote data provider."""
+        if self._client is None:
+            raise RuntimeError("Client is required to fetch fluctuations data.")
         incomplete_dates = self._repository.find_incomplete_dates(
             coin=config.coin,
             currency=config.currency,
             from_date=config.from_date,
             to_date=config.to_date,
         )
-        for date in tqdm(incomplete_dates):
+        for date in tqdm(incomplete_dates, desc="Downloading fluctuations data"):
             fluctuations = self._client.fetch_historical_data(
                 symbol=config.coin + config.currency,
                 start_date=date,
@@ -138,3 +145,22 @@ def _merge_fluctuations(fluctuations_chunks: list[Fluctuations]) -> Fluctuations
         .reset_index(drop=True)
     )
     return Fluctuations(dataframe=merged_fluctuations)
+
+
+def _process_chunk(
+    chunk: DateRange, repository: FluctuationsRepository, coin: str, currency: str, timeframe: str
+) -> Fluctuations | None:
+    """Process a single chunk of data."""
+    chunk_fluctuations = repository.query(
+        coin=coin,
+        currency=currency,
+        from_date=chunk.start_date,
+        to_date=chunk.end_date,
+    )
+    if chunk_fluctuations.size == 0:
+        return None
+
+    chunk_fluctuations = _resume_fluctuations(chunk_fluctuations)
+    if chunk_fluctuations.period == Period(timeframe):
+        return chunk_fluctuations
+    return None
