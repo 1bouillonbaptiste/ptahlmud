@@ -11,6 +11,10 @@ requires-python = ">=3.11,<4.0"
 [tool.poetry.dependencies]
 pydantic = ">=2.11,<3"
 numpy = ">=2.0,<3"
+pandas = ">=2.3.0,<3"
+python-binance = ">=1.0.29,<2"
+tqdm = "^4.67.1"
+types-tqdm = "^4.67.0.20250516"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -22,6 +26,7 @@ pre-commit = ">=4.2,<5"
 pytest = ">=8.3,<9"
 pytest-cases = ">=3.8,<4"
 pytest-cov = ">=6.1,<7"
+pandas-stubs = ">=2.2.3,<3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -32,3 +37,10 @@ skip_empty = true
 
 [tool.coverage.run]
 omit = ["tests/*"]
+
+# Configure specific modules to ignore missing imports
+[[tool.mypy.overrides]]
+module = [
+    "binance.*",
+]
+ignore_missing_imports = true

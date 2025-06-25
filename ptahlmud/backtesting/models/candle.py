@@ -63,7 +63,7 @@ class Candle:
         if self.low_time and not self.high_time:
             raise ValueError("`high_time` and `low_time` must be both set or both left empty.")
 
-        if self.high_time:
+        if self.high_time and self.low_time:
             if self.high_time < self.open_time:
                 raise ValueError("`high_time` must be later than `open_time`.")
             if self.high_time > self.close_time:
