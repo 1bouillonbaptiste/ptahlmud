@@ -4,9 +4,9 @@ from decimal import Decimal
 import pytest
 from pytest_cases import parametrize_with_cases
 
+from ptahlmud.backtesting.models.signal import Side
 from ptahlmud.backtesting.portfolio import Portfolio, WealthItem, WealthSeries
 from ptahlmud.backtesting.position import Position, Trade
-from ptahlmud.types.signal import Side
 
 
 def test_wealth_series_update_wealth_after_date():

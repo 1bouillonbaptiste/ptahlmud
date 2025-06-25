@@ -27,7 +27,7 @@ from datetime import datetime
 
 from ptahlmud.backtesting.backtest import RiskConfig, process_signals
 from ptahlmud.entities.fluctuations import Fluctuations
-from ptahlmud.types.signal import Signal, Side, Action
+from ptahlmud.backtesting.models.signal import Signal, Side, Action
 
 # Define trading signals
 signals = [
@@ -39,9 +39,9 @@ signals = [
 
 # Configure risk management
 risk_config = RiskConfig(
-    size=0.1,          # Use 10% of available capital per trade
+    size=0.1,  # Use 10% of available capital per trade
     take_profit=0.05,  # Take profit at 5% price increase
-    stop_loss=0.03,    # Cut losses at 3% price decrease
+    stop_loss=0.03,  # Cut losses at 3% price decrease
 )
 
 # You will need to implement this for your data source
@@ -68,7 +68,8 @@ print(f"Win rate : {sum([1 for trade in trades if trade.total_profit > 0]) / len
 You can define custom trading strategies by creating signals based on technical indicators or other market conditions:
 
 ```python
-from ptahlmud.types.signal import Signal, Side, Action
+from ptahlmud.backtesting.models.signal import Signal, Side, Action
+
 
 def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) -> list[Signal]:
     """Simple moving average crossover strategy."""
@@ -81,7 +82,7 @@ def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) ->
     # Generate signals on crossovers
     for index, candle in enumerate(fluctuations.candles):
         # fast ma crossed above slow ma
-        if fast_ma[index-1] < slow_ma[index-1] and fast_ma[index] > slow_ma[index]:
+        if fast_ma[index - 1] < slow_ma[index - 1] and fast_ma[index] > slow_ma[index]:
             signals.append(Signal(
                 date=candle.close_time,
                 side=Side.LONG,
@@ -89,7 +90,7 @@ def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) ->
             ))
 
         # slow ma crossed bellow slow ma
-        if fast_ma[index-1] > slow_ma[index-1] and fast_ma[index] < slow_ma[index]:
+        if fast_ma[index - 1] > slow_ma[index - 1] and fast_ma[index] < slow_ma[index]:
             signals.append(Signal(
                 date=candle.close_time,
                 side=Side.LONG,
@@ -97,6 +98,7 @@ def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) ->
             ))
 
     return signals
+
 
 signals = moving_average_strategy(market_date, fast_period=10, slow_period=30)
 trades = process_signals(

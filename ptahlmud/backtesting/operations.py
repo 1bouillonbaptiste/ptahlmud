@@ -5,8 +5,8 @@ from typing import Literal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.candle import Candle, CandleCollection
+from ptahlmud.backtesting.models.signal import Side
 from ptahlmud.backtesting.position import Position, Trade
-from ptahlmud.types.signal import Side
 
 
 @dataclass(slots=True)

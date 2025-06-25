@@ -7,8 +7,8 @@ from hypothesis import given
 from hypothesis import strategies as some
 from hypothesis.strategies import composite
 
+from ptahlmud.backtesting.models.signal import Side
 from ptahlmud.backtesting.position import Position
-from ptahlmud.types.signal import Side
 
 
 @pytest.fixture
