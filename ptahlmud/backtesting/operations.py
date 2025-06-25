@@ -4,9 +4,8 @@ from decimal import Decimal
 from typing import Literal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
-from ptahlmud.backtesting.models.candle_collection import CandleCollection
+from ptahlmud.backtesting.models.candle import Candle, CandleCollection
 from ptahlmud.backtesting.position import Position, Trade
-from ptahlmud.types.candle import Candle
 from ptahlmud.types.signal import Side
 
 
@@ -61,7 +60,7 @@ class ExitMode:
                 date = candle.close_time
             case "hold":
                 date = datetime(1900, 1, 1)
-        return price, date  # noqa: price and date are always set
+        return price, date  # price and date are always set
 
 
 def _get_position_exit_mode(position: Position, candle: Candle) -> ExitMode:
