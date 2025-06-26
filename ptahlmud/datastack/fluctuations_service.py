@@ -8,7 +8,6 @@ import math
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from functools import partial
 from multiprocessing import Pool
 from typing import Callable
 
@@ -62,36 +61,32 @@ class FluctuationsService:
             end_date=config.to_date,
             period=Period(timeframe=config.timeframe),
         )
-        process_func = partial(
-            self._query_fluctuations,
-            coin=config.coin,
-            currency=config.currency,
-            period=Period(config.timeframe),
-        )
+        configurations = [
+            config.model_copy(update={"from_date": chunk.start_date, "to_date": chunk.end_date})
+            for chunk in date_ranges
+        ]
 
         nb_processes = max((os.cpu_count() or 1) * 3 // 4, 1)
         with Pool(processes=nb_processes) as pool:
             results = list(
-                tqdm(pool.imap(process_func, date_ranges), total=len(date_ranges), desc="Loading fluctuations data")
+                tqdm(
+                    pool.imap(self._query_fluctuations, configurations),
+                    total=len(configurations),
+                    desc="Loading fluctuations data",
+                )
             )
         all_fluctuations: list[Fluctuations] = [result for result in results if result is not None]
         return _merge_fluctuations(all_fluctuations)
 
-    def _query_fluctuations(
-        self,
-        chunk: DateRange,
-        coin: str,
-        currency: str,
-        period: Period,
-    ) -> Fluctuations:
+    def _query_fluctuations(self, config: FluctuationsConfig) -> Fluctuations:
         """Query the repository for a single chunk of data."""
         chunk_fluctuations = self._repository.query(
-            coin=coin,
-            currency=currency,
-            from_date=chunk.start_date,
-            to_date=chunk.end_date,
+            coin=config.coin,
+            currency=config.currency,
+            from_date=config.from_date,
+            to_date=config.to_date,
         )
-        chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=period)
+        chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=Period(config.timeframe))
         return chunk_fluctuations
 
     def fetch(self, config: FluctuationsConfig) -> None:
