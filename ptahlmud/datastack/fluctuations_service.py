@@ -126,14 +126,7 @@ class FluctuationsService:
             self._repository.save(fluctuations, coin=config.coin, currency=config.currency)
 
 
-class CustomOperation(BaseModel):
-    """Define a custom operation on a `pandas.series`."""
-
-    column: str
-    function: Callable[[pd.Series], int | float]
-
-
-def _build_aggregation_function(custom_ops: list[CustomOperation]) -> Callable[[pd.DataFrame], pd.Series]:
+def _build_aggregation_function() -> Callable[[pd.DataFrame], pd.Series]:
     def custom_agg(group: pd.DataFrame) -> pd.Series:
         if len(group) == 0:
             return pd.Series()
@@ -152,7 +145,6 @@ def _build_aggregation_function(custom_ops: list[CustomOperation]) -> Callable[[
                 "low": group["low"].min(),
                 "close": group["close"].iloc[-1],
             }
-            | {operation.column: operation.function(group[operation.column]) for operation in custom_ops}
         )
 
     return custom_agg
@@ -162,7 +154,7 @@ def _convert_fluctuations_to_period(fluctuations: Fluctuations, period: Period) 
     """Convert fluctuations dataframe rows as a single one."""
     if fluctuations.size == 0:
         return fluctuations
-    custom_aggregation = _build_aggregation_function(custom_ops=[])
+    custom_aggregation = _build_aggregation_function()
 
     df = fluctuations.dataframe.copy()
     df_indexed = df.set_index(df["open_time"])
