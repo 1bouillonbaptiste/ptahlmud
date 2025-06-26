@@ -4,11 +4,13 @@ It is responsible to collect requested fluctuations.
 If the data is not in the db, it will fetch it from the remote data provider.
 """
 
+import math
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from multiprocessing import Pool
+from typing import Callable
 
 import pandas as pd
 from pydantic import BaseModel
@@ -27,9 +29,28 @@ class DateRange:
     start_date: datetime
     end_date: datetime
 
+    def split(self, delta: timedelta) -> list["DateRange"]:
+        """Split the date range into smaller chunks.
 
-class FluctuationsConfig(BaseModel):
-    """Configure fluctuations parameters.
+        This is an optimization, assuming the database stores daily fluctuations data.
+        The date range can be split in daily chunks so that each chunk can be exactly divided by the period.
+        """
+        minutes_in_day = 60 * 24
+        period_total_minutes = int(delta.total_seconds()) // 60
+        days_per_chunk: int = math.lcm(minutes_in_day, period_total_minutes) // minutes_in_day
+
+        chunk_size: timedelta = timedelta(days=days_per_chunk)
+        chunks: list[DateRange] = []
+        current_start = self.start_date
+        while current_start < self.end_date:
+            current_end = min(current_start + chunk_size, self.end_date)
+            chunks.append(DateRange(start_date=current_start, end_date=current_end))
+            current_start = current_end
+        return chunks
+
+
+class FluctuationsSpecs(BaseModel):
+    """Specifications that fully define `Fluctuations`.
 
     Attributes:
         coin: the base coin of the fluctuations (e.g. 'BTC' or 'ETH')
@@ -47,47 +68,37 @@ class FluctuationsConfig(BaseModel):
 
 
 class FluctuationsService:
-    """Define fluctuations service."""
+    """Define the fluctuations service."""
 
     def __init__(self, repository: FluctuationsRepository, client: RemoteClient | None = None):
         self._repository = repository
         self._client = client
 
-    def request(self, config: FluctuationsConfig) -> Fluctuations:
-        """Load fluctuations from the database."""
-        # optimization, with '1m' timeframe we don't need to convert the data
-        if config.timeframe == "1m":
-            return self._repository.query(
-                coin=config.coin,
-                currency=config.currency,
-                from_date=config.from_date,
-                to_date=config.to_date,
+    def request(self, config: FluctuationsSpecs) -> Fluctuations:
+        """Build fluctuations from specifications."""
+        date_ranges = DateRange(start_date=config.from_date, end_date=config.to_date).split(
+            delta=Period(timeframe=config.timeframe).to_timedelta()
+        )
+        configurations = [
+            config.model_copy(update={"from_date": chunk.start_date, "to_date": chunk.end_date})
+            for chunk in date_ranges
+        ]
+        _process_function = partial(_process_config_chunk, repository=self._repository)
+
+        max_workers = max((os.cpu_count() or 1) * 3 // 4, 1)
+        with Pool(processes=max_workers) as pool:
+            all_fluctuations = list(
+                tqdm(
+                    pool.imap(_process_function, configurations),
+                    total=len(configurations),
+                    desc="Loading fluctuations data",
+                )
             )
 
-        date_ranges = _chunkify(
-            start_date=config.from_date,
-            end_date=config.to_date,
-            chunk_size=Period(timeframe=config.timeframe).to_timedelta(),
-        )
-        process_func = partial(
-            _process_chunk,
-            repository=self._repository,
-            coin=config.coin,
-            currency=config.currency,
-            timeframe=config.timeframe,
-        )
-
-        nb_processes = max((os.cpu_count() or 1) * 3 // 4, 1)
-        with Pool(processes=nb_processes) as pool:
-            # Use imap for progress tracking
-            results = list(
-                tqdm(pool.imap(process_func, date_ranges), total=len(date_ranges), desc="Loading fluctuations data")
-            )
-        all_fluctuations: list[Fluctuations] = [result for result in results if result is not None]
         return _merge_fluctuations(all_fluctuations)
 
-    def fetch(self, config: FluctuationsConfig) -> None:
-        """Fetch missing fluctuations data from the remote data provider."""
+    def fetch(self, config: FluctuationsSpecs) -> None:
+        """Update missing fluctuations from the database using the remote data provider."""
         if self._client is None:
             raise RuntimeError("Client is required to fetch fluctuations data.")
         incomplete_dates = self._repository.find_incomplete_dates(
@@ -106,61 +117,89 @@ class FluctuationsService:
             self._repository.save(fluctuations, coin=config.coin, currency=config.currency)
 
 
-def _chunkify(start_date: datetime, end_date: datetime, chunk_size: timedelta) -> list[DateRange]:
-    """Split a time range into chunks of a given size."""
-    chunks: list[DateRange] = []
-    current_start = start_date
-    while current_start < end_date:
-        current_end = min(current_start + chunk_size, end_date)
-        chunks.append(DateRange(start_date=current_start, end_date=current_end))
-        current_start = current_end
-    return chunks
-
-
-def _resume_fluctuations(fluctuations: Fluctuations) -> Fluctuations:
-    """Resume fluctuations dataframe rows as a single one."""
-    index_max = fluctuations.dataframe["high"].argmax()
-    index_min = fluctuations.dataframe["low"].argmin()
-    resumed_dataframe = pd.DataFrame(
-        {
-            "open_time": fluctuations.dataframe["open_time"].iloc[0],
-            "high_time": fluctuations.dataframe["close_time"].iloc[index_max],
-            "low_time": fluctuations.dataframe["close_time"].iloc[index_min],
-            "close_time": fluctuations.dataframe["close_time"].iloc[-1],
-            "open": fluctuations.dataframe["open"].iloc[0],
-            "high": fluctuations.dataframe["high"].max(),
-            "low": fluctuations.dataframe["low"].min(),
-            "close": fluctuations.dataframe["close"].iloc[-1],
-        },
-        index=[0],
+def _process_config_chunk(specs: FluctuationsSpecs, repository: FluctuationsRepository) -> Fluctuations:
+    """Process a single configuration chunk - used for multiprocessing."""
+    chunk_fluctuations = repository.query(
+        coin=specs.coin,
+        currency=specs.currency,
+        from_date=specs.from_date,
+        to_date=specs.to_date,
     )
-    return Fluctuations(dataframe=resumed_dataframe)
+    chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=Period(specs.timeframe))
+    return chunk_fluctuations
+
+
+def _build_aggregation_function() -> Callable[[pd.DataFrame], pd.Series]:
+    """Create a pandas aggregation function with custom operations."""
+
+    def custom_agg(group: pd.DataFrame) -> pd.Series:
+        """Define how to aggregate a dataframe to a series."""
+        if len(group) == 0:
+            return pd.Series(
+                {
+                    "open_time": None,
+                    "high_time": None,
+                    "low_time": None,
+                    "close_time": None,
+                    "open": None,
+                    "high": None,
+                    "low": None,
+                    "close": None,
+                }
+            )
+
+        high_max_idx = group["high"].idxmax()
+        low_min_idx = group["low"].idxmin()
+
+        return pd.Series(
+            {
+                "open_time": group["open_time"].iloc[0],
+                "high_time": group["close_time"][high_max_idx],
+                "low_time": group["close_time"][low_min_idx],
+                "close_time": group["close_time"].iloc[-1],
+                "open": group["open"].iloc[0],
+                "high": group["high"].max(),
+                "low": group["low"].min(),
+                "close": group["close"].iloc[-1],
+            }
+        )
+
+    return custom_agg
+
+
+def _convert_fluctuations_to_period(fluctuations: Fluctuations, period: Period) -> Fluctuations:
+    """Merge fluctuations so that each row has a period of `period`."""
+    if fluctuations.size == 0:
+        return fluctuations
+    custom_aggregation = _build_aggregation_function()
+    df = fluctuations.dataframe.copy()
+
+    # Pandas raise a warning when the datetime is not enforced
+    df["open_time"] = pd.to_datetime(df["open_time"])
+    df_indexed = df.set_index("open_time", drop=False)
+    df_converted = (
+        df_indexed.resample(
+            period.to_timedelta(),
+            origin=fluctuations.earliest_open_time,
+        )
+        .apply(lambda group: custom_aggregation(group))
+        .dropna()
+        .reset_index(drop=True)
+    )
+
+    # the last candle may be incomplete when the period is not a multiple of date range
+    if (df_converted.iloc[-1]["open_time"] + period.to_timedelta()) != fluctuations.dataframe.iloc[-1]["close_time"]:
+        df_converted = df_converted.iloc[:-1]
+    return Fluctuations(dataframe=df_converted)
 
 
 def _merge_fluctuations(fluctuations_chunks: list[Fluctuations]) -> Fluctuations:
-    """Concatenate fluctuations dataframes."""
+    """Concatenate fluctuations to a single dataframe."""
+    if not fluctuations_chunks:
+        return Fluctuations.empty()
     merged_fluctuations = (
         pd.concat([fluctuations.dataframe for fluctuations in fluctuations_chunks])
         .sort_values(by="open_time")
         .reset_index(drop=True)
     )
     return Fluctuations(dataframe=merged_fluctuations)
-
-
-def _process_chunk(
-    chunk: DateRange, repository: FluctuationsRepository, coin: str, currency: str, timeframe: str
-) -> Fluctuations | None:
-    """Process a single chunk of data."""
-    chunk_fluctuations = repository.query(
-        coin=coin,
-        currency=currency,
-        from_date=chunk.start_date,
-        to_date=chunk.end_date,
-    )
-    if chunk_fluctuations.size == 0:
-        return None
-
-    chunk_fluctuations = _resume_fluctuations(chunk_fluctuations)
-    if chunk_fluctuations.period == Period(timeframe):
-        return chunk_fluctuations
-    return None

@@ -33,6 +33,11 @@ class Fluctuations:
 
         self.dataframe = dataframe
 
+    @classmethod
+    def empty(cls) -> "Fluctuations":
+        """Create an empty fluctuations."""
+        return cls(dataframe=pd.DataFrame(columns=["open_time", "close_time", "open", "high", "low", "close"]))
+
     @property
     def size(self) -> int:
         """Return the total number of candles."""
