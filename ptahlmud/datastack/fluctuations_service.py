@@ -138,15 +138,14 @@ def _build_aggregation_function(custom_ops: list[CustomOperation]) -> Callable[[
         if len(group) == 0:
             return pd.Series()
 
-        # Find indices of max and min values
         high_max_idx = group["high"].idxmax()
         low_min_idx = group["low"].idxmin()
 
         return pd.Series(
             {
                 "open_time": group["open_time"].iloc[0],
-                "high_time": high_max_idx,
-                "low_time": low_min_idx,
+                "high_time": group["close_time"][high_max_idx],
+                "low_time": group["close_time"][low_min_idx],
                 "close_time": group["close_time"].iloc[-1],
                 "open": group["open"].iloc[0],
                 "high": group["high"].max(),
@@ -177,7 +176,7 @@ def _convert_fluctuations_to_period(fluctuations: Fluctuations, period: Period) 
         .reset_index(drop=True)
     )
 
-    # the first or last candle may be incomplete when period is not a multiple of date range
+    # the first or last candle may be incomplete when the period is not a multiple of date range
     if (df_converted.iloc[-1]["open_time"] + period.to_timedelta()) != fluctuations.dataframe.iloc[-1]["close_time"]:
         df_converted = df_converted.iloc[:-1]
     return Fluctuations(dataframe=df_converted)
