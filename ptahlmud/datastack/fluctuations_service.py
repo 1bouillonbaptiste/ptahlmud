@@ -63,11 +63,10 @@ class FluctuationsService:
             period=Period(timeframe=config.timeframe),
         )
         process_func = partial(
-            _process_chunk,
-            repository=self._repository,
+            self._query_fluctuations,
             coin=config.coin,
             currency=config.currency,
-            timeframe=config.timeframe,
+            period=Period(config.timeframe),
         )
 
         nb_processes = max((os.cpu_count() or 1) * 3 // 4, 1)
@@ -77,6 +76,23 @@ class FluctuationsService:
             )
         all_fluctuations: list[Fluctuations] = [result for result in results if result is not None]
         return _merge_fluctuations(all_fluctuations)
+
+    def _query_fluctuations(
+        self,
+        chunk: DateRange,
+        coin: str,
+        currency: str,
+        period: Period,
+    ) -> Fluctuations:
+        """Query the repository for a single chunk of data."""
+        chunk_fluctuations = self._repository.query(
+            coin=coin,
+            currency=currency,
+            from_date=chunk.start_date,
+            to_date=chunk.end_date,
+        )
+        chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=period)
+        return chunk_fluctuations
 
     def fetch(self, config: FluctuationsConfig) -> None:
         """Fetch missing fluctuations data from the remote data provider."""
@@ -181,17 +197,3 @@ def _merge_fluctuations(fluctuations_chunks: list[Fluctuations]) -> Fluctuations
         .reset_index(drop=True)
     )
     return Fluctuations(dataframe=merged_fluctuations)
-
-
-def _process_chunk(
-    chunk: DateRange, repository: FluctuationsRepository, coin: str, currency: str, timeframe: str
-) -> Fluctuations | None:
-    """Process a single chunk of data."""
-    chunk_fluctuations = repository.query(
-        coin=coin,
-        currency=currency,
-        from_date=chunk.start_date,
-        to_date=chunk.end_date,
-    )
-    chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=Period(timeframe=timeframe))
-    return chunk_fluctuations
