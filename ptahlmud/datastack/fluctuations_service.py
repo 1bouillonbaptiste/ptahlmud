@@ -28,9 +28,28 @@ class DateRange:
     start_date: datetime
     end_date: datetime
 
+    def split(self, delta: timedelta) -> list["DateRange"]:
+        """Split the date range into smaller chunks.
+
+        This is an optimization, assuming the database stores daily fluctuations data.
+        The date range can be split in daily chunks so that each chunk can be exactly divided by the period.
+        """
+        minutes_in_day = 60 * 24
+        period_total_minutes = int(delta.total_seconds()) // 60
+        days_per_chunk: int = math.lcm(minutes_in_day, period_total_minutes) // minutes_in_day
+
+        chunk_size: timedelta = timedelta(days=days_per_chunk)
+        chunks: list[DateRange] = []
+        current_start = self.start_date
+        while current_start < self.end_date:
+            current_end = min(current_start + chunk_size, self.end_date)
+            chunks.append(DateRange(start_date=current_start, end_date=current_end))
+            current_start = current_end
+        return chunks
+
 
 class FluctuationsConfig(BaseModel):
-    """Configure fluctuations parameters.
+    """Configure fluctuations.
 
     Attributes:
         coin: the base coin of the fluctuations (e.g. 'BTC' or 'ETH')
@@ -48,7 +67,7 @@ class FluctuationsConfig(BaseModel):
 
 
 class FluctuationsService:
-    """Define fluctuations service."""
+    """Define the fluctuations service."""
 
     def __init__(self, repository: FluctuationsRepository, client: RemoteClient | None = None):
         self._repository = repository
@@ -56,10 +75,8 @@ class FluctuationsService:
 
     def request(self, config: FluctuationsConfig) -> Fluctuations:
         """Load fluctuations from the database."""
-        date_ranges = _chunkify(
-            start_date=config.from_date,
-            end_date=config.to_date,
-            period=Period(timeframe=config.timeframe),
+        date_ranges = DateRange(start_date=config.from_date, end_date=config.to_date).split(
+            delta=Period(timeframe=config.timeframe).to_timedelta()
         )
         configurations = [
             config.model_copy(update={"from_date": chunk.start_date, "to_date": chunk.end_date})
@@ -109,24 +126,8 @@ class FluctuationsService:
             self._repository.save(fluctuations, coin=config.coin, currency=config.currency)
 
 
-def _chunkify(start_date: datetime, end_date: datetime, period: Period) -> list[DateRange]:
-    """Split a time range into chunks of a given size."""
-    minutes_in_day = 60 * 24
-    period_total_minutes = int(period.to_timedelta().total_seconds()) // 60
-    days_per_chunk: int = math.lcm(minutes_in_day, period_total_minutes) // minutes_in_day
-
-    chunk_size: timedelta = timedelta(days=days_per_chunk)
-    chunks: list[DateRange] = []
-    current_start = start_date
-    while current_start < end_date:
-        current_end = min(current_start + chunk_size, end_date)
-        chunks.append(DateRange(start_date=current_start, end_date=current_end))
-        current_start = current_end
-    return chunks
-
-
 class CustomOperation(BaseModel):
-    """Define a custom operation on a pandas series."""
+    """Define a custom operation on a `pandas.series`."""
 
     column: str
     function: Callable[[pd.Series], int | float]
@@ -162,7 +163,7 @@ def _convert_fluctuations_to_period(fluctuations: Fluctuations, period: Period) 
     """Convert fluctuations dataframe rows as a single one."""
     if fluctuations.size == 0:
         return fluctuations
-    custom_aggregation = _build_aggregation_function([])
+    custom_aggregation = _build_aggregation_function(custom_ops=[])
 
     df = fluctuations.dataframe.copy()
     df_indexed = df.set_index(df["open_time"])
