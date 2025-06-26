@@ -5,7 +5,7 @@ import pytest
 from ptahlmud.datastack.clients.remote_client import RemoteClient
 from ptahlmud.datastack.fluctuations import Fluctuations
 from ptahlmud.datastack.fluctuations_repository import FilesMapper, FluctuationsRepository
-from ptahlmud.datastack.fluctuations_service import FluctuationsConfig, FluctuationsService
+from ptahlmud.datastack.fluctuations_service import FluctuationsService, FluctuationsSpecs
 from ptahlmud.datastack.testing.fluctuations import generate_fluctuations
 from ptahlmud.types import Period
 
@@ -32,7 +32,7 @@ def mocked_service(tmp_path):
 
 
 def test_service_request_is_empty(mocked_service):
-    config = FluctuationsConfig.model_validate(
+    config = FluctuationsSpecs.model_validate(
         {
             "coin": "FAKE",
             "currency": "NEWS",
@@ -46,7 +46,7 @@ def test_service_request_is_empty(mocked_service):
 
 
 def test_service_request_incomplete_data(mocked_service):
-    config = FluctuationsConfig.model_validate(
+    config = FluctuationsSpecs.model_validate(
         {
             "coin": "FAKE",
             "currency": "NEWS",
@@ -72,7 +72,7 @@ def test_service_request_incomplete_data(mocked_service):
 
 
 def test_service_fetch_data(mocked_service):
-    config = FluctuationsConfig.model_validate(
+    config = FluctuationsSpecs.model_validate(
         {
             "coin": "FAKE",
             "currency": "NEWS",
@@ -92,7 +92,7 @@ def test_service_fetch_data(mocked_service):
 
 
 def test_service_request_subset(mocked_service):
-    config = FluctuationsConfig.model_validate(
+    config = FluctuationsSpecs.model_validate(
         {
             "coin": "FAKE",
             "currency": "NEWS",
@@ -112,7 +112,7 @@ def test_service_request_subset(mocked_service):
 
 
 def test_service_request_and_convert_fluctuations(mocked_service):
-    config = FluctuationsConfig.model_validate(
+    config = FluctuationsSpecs.model_validate(
         {
             "coin": "FAKE",
             "currency": "NEWS",
