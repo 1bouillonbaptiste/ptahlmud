@@ -5,8 +5,11 @@ If the data is not in the db, it will fetch it from the remote data provider.
 """
 
 import math
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import partial
+from multiprocessing import Pool
 from typing import Callable
 
 import pandas as pd
@@ -80,20 +83,19 @@ class FluctuationsService:
             config.model_copy(update={"from_date": chunk.start_date, "to_date": chunk.end_date})
             for chunk in date_ranges
         ]
+        _process_function = partial(_process_config_chunk, repository=self._repository)
 
-        all_fluctuations = [self._query_fluctuations(config) for config in configurations]
+        max_workers = max((os.cpu_count() or 1) * 3 // 4, 1)
+        with Pool(processes=max_workers) as pool:
+            all_fluctuations = list(
+                tqdm(
+                    pool.imap(_process_function, configurations),
+                    total=len(configurations),
+                    desc="Loading fluctuations data",
+                )
+            )
+
         return _merge_fluctuations(all_fluctuations)
-
-    def _query_fluctuations(self, config: FluctuationsSpecs) -> Fluctuations:
-        """Query the repository for a precise chunk of data."""
-        chunk_fluctuations = self._repository.query(
-            coin=config.coin,
-            currency=config.currency,
-            from_date=config.from_date,
-            to_date=config.to_date,
-        )
-        chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=Period(config.timeframe))
-        return chunk_fluctuations
 
     def fetch(self, config: FluctuationsSpecs) -> None:
         """Update missing fluctuations from the database using the remote data provider."""
@@ -113,6 +115,18 @@ class FluctuationsService:
                 timeframe="1m",
             )
             self._repository.save(fluctuations, coin=config.coin, currency=config.currency)
+
+
+def _process_config_chunk(specs: FluctuationsSpecs, repository: FluctuationsRepository) -> Fluctuations:
+    """Process a single configuration chunk - used for multiprocessing."""
+    chunk_fluctuations = repository.query(
+        coin=specs.coin,
+        currency=specs.currency,
+        from_date=specs.from_date,
+        to_date=specs.to_date,
+    )
+    chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=Period(specs.timeframe))
+    return chunk_fluctuations
 
 
 def _build_aggregation_function() -> Callable[[pd.DataFrame], pd.Series]:
