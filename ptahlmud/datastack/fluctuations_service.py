@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
 from multiprocessing import Pool
+from pathlib import Path
 from typing import Callable
 
 import pandas as pd
@@ -19,7 +20,7 @@ from tqdm import tqdm
 from ptahlmud.datastack.clients.remote_client import RemoteClient
 from ptahlmud.datastack.custom_operations import CustomOperation, get_operation, register_operation
 from ptahlmud.datastack.fluctuations import Fluctuations
-from ptahlmud.datastack.fluctuations_repository import FluctuationsRepository
+from ptahlmud.datastack.fluctuations_repository import FilesMapper, FluctuationsRepository
 from ptahlmud.types import Period
 
 
@@ -71,8 +72,8 @@ class FluctuationsSpecs(BaseModel):
 class FluctuationsService:
     """Define the fluctuations service."""
 
-    def __init__(self, repository: FluctuationsRepository, client: RemoteClient | None = None) -> None:
-        self._repository = repository
+    def __init__(self, savedir: Path, client: RemoteClient | None = None) -> None:
+        self._repository = FluctuationsRepository(FilesMapper(root=savedir))
         self._client = client
 
     def request(
