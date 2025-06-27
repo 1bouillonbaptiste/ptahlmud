@@ -5,7 +5,7 @@ import pytest
 from ptahlmud.datastack.clients.remote_client import RemoteClient
 from ptahlmud.datastack.fluctuations import Fluctuations
 from ptahlmud.datastack.fluctuations_repository import FilesMapper, FluctuationsRepository
-from ptahlmud.datastack.fluctuations_service import FluctuationsService, FluctuationsSpecs
+from ptahlmud.datastack.fluctuations_service import CustomOperation, FluctuationsService, FluctuationsSpecs
 from ptahlmud.datastack.testing.fluctuations import generate_fluctuations
 from ptahlmud.types import Period
 
@@ -27,7 +27,8 @@ class MockedClient(RemoteClient):
 @pytest.fixture
 def mocked_service(tmp_path):
     return FluctuationsService(
-        client=MockedClient(), repository=FluctuationsRepository(database=FilesMapper(root=tmp_path))
+        client=MockedClient(),
+        repository=FluctuationsRepository(database=FilesMapper(root=tmp_path)),
     )
 
 
@@ -135,3 +136,33 @@ def test_service_request_and_convert_fluctuations(mocked_service):
 
     for _, candle in fluctuations.dataframe.iterrows():
         assert (candle["close_time"] - candle["open_time"]) == timedelta(minutes=MINUTES_IN_TIMEFRAME)
+
+
+def _trend_strength(df):
+    return ((df["close"] - df["open"]) > 0).mean()
+
+
+def test_service_request_custom_operation(mocked_service: FluctuationsService):
+    config = FluctuationsSpecs.model_validate(
+        {
+            "coin": "FAKE",
+            "currency": "NEWS",
+            "from_date": datetime(2020, 1, 1, hour=5),
+            "to_date": datetime(2020, 1, 1, hour=7),
+            "timeframe": "15m",
+        }
+    )
+    mocked_service.fetch(config)
+
+    fluctuations = mocked_service.request(
+        config,
+        custom_operations=[
+            CustomOperation(
+                column="trend_strength",
+                function=lambda df: ((df["close"] - df["open"]) > 0).mean(),
+                requires=["open", "close"],
+            )
+        ],
+    )
+
+    assert "trend_strength" in fluctuations.dataframe.columns
