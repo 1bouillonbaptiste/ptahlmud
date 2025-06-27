@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from tqdm import tqdm
 
 from ptahlmud.datastack.clients.remote_client import RemoteClient
+from ptahlmud.datastack.custom_operations import CustomOperation, get_operation, register_operation
 from ptahlmud.datastack.fluctuations import Fluctuations
 from ptahlmud.datastack.fluctuations_repository import FluctuationsRepository
 from ptahlmud.types import Period
@@ -70,11 +71,13 @@ class FluctuationsSpecs(BaseModel):
 class FluctuationsService:
     """Define the fluctuations service."""
 
-    def __init__(self, repository: FluctuationsRepository, client: RemoteClient | None = None):
+    def __init__(self, repository: FluctuationsRepository, client: RemoteClient | None = None) -> None:
         self._repository = repository
         self._client = client
 
-    def request(self, config: FluctuationsSpecs) -> Fluctuations:
+    def request(
+        self, config: FluctuationsSpecs, custom_operations: list[CustomOperation] | None = None
+    ) -> Fluctuations:
         """Build fluctuations from specifications."""
         date_ranges = DateRange(start_date=config.from_date, end_date=config.to_date).split(
             delta=Period(timeframe=config.timeframe).to_timedelta()
@@ -83,7 +86,13 @@ class FluctuationsService:
             config.model_copy(update={"from_date": chunk.start_date, "to_date": chunk.end_date})
             for chunk in date_ranges
         ]
-        _process_function = partial(_process_config_chunk, repository=self._repository)
+
+        # multiprocessing cannot handle functions as arguments, we register operations and access them later
+        operations_names = _register_operations(custom_operations or [])
+
+        _process_function = partial(
+            _process_config_chunk, repository=self._repository, operations_names=operations_names
+        )
 
         max_workers = max((os.cpu_count() or 1) * 3 // 4, 1)
         with Pool(processes=max_workers) as pool:
@@ -117,7 +126,23 @@ class FluctuationsService:
             self._repository.save(fluctuations, coin=config.coin, currency=config.currency)
 
 
-def _process_config_chunk(specs: FluctuationsSpecs, repository: FluctuationsRepository) -> Fluctuations:
+def _register_operations(custom_operations: list[CustomOperation]) -> list[str]:
+    """Register custom operations in the global scope."""
+    operations_names = []
+    for custom_operation in custom_operations:
+        register_operation(custom_operation)
+        operations_names.append(custom_operation.column)
+    return operations_names
+
+
+def _get_operations(operations_names: list[str]) -> list[CustomOperation]:
+    """Access custom operations from the global scope."""
+    return [get_operation(name) for name in operations_names]
+
+
+def _process_config_chunk(
+    specs: FluctuationsSpecs, repository: FluctuationsRepository, operations_names: list[str]
+) -> Fluctuations:
     """Process a single configuration chunk - used for multiprocessing."""
     chunk_fluctuations = repository.query(
         coin=specs.coin,
@@ -125,11 +150,16 @@ def _process_config_chunk(specs: FluctuationsSpecs, repository: FluctuationsRepo
         from_date=specs.from_date,
         to_date=specs.to_date,
     )
-    chunk_fluctuations = _convert_fluctuations_to_period(chunk_fluctuations, period=Period(specs.timeframe))
+    # access the operations now
+    custom_operations = _get_operations(operations_names)
+
+    chunk_fluctuations = _convert_fluctuations_to_period(
+        chunk_fluctuations, period=Period(specs.timeframe), custom_operations=custom_operations
+    )
     return chunk_fluctuations
 
 
-def _build_aggregation_function() -> Callable[[pd.DataFrame], pd.Series]:
+def _build_aggregation_function(custom_operations: list[CustomOperation]) -> Callable[[pd.DataFrame], pd.Series]:
     """Create a pandas aggregation function with custom operations."""
 
     def custom_agg(group: pd.DataFrame) -> pd.Series:
@@ -146,6 +176,7 @@ def _build_aggregation_function() -> Callable[[pd.DataFrame], pd.Series]:
                     "low": None,
                     "close": None,
                 }
+                | {operation.column: None for operation in custom_operations}
             )
 
         high_max_idx = group["high"].idxmax()
@@ -162,16 +193,19 @@ def _build_aggregation_function() -> Callable[[pd.DataFrame], pd.Series]:
                 "low": group["low"].min(),
                 "close": group["close"].iloc[-1],
             }
+            | {operation.column: operation.function(group[operation.requires]) for operation in custom_operations}
         )
 
     return custom_agg
 
 
-def _convert_fluctuations_to_period(fluctuations: Fluctuations, period: Period) -> Fluctuations:
+def _convert_fluctuations_to_period(
+    fluctuations: Fluctuations, period: Period, custom_operations: list[CustomOperation]
+) -> Fluctuations:
     """Merge fluctuations so that each row has a period of `period`."""
     if fluctuations.size == 0:
         return fluctuations
-    custom_aggregation = _build_aggregation_function()
+    custom_aggregation = _build_aggregation_function(custom_operations)
     df = fluctuations.dataframe.copy()
 
     # Pandas raise a warning when the datetime is not enforced
