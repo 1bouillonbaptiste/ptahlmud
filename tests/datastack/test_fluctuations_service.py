@@ -4,7 +4,6 @@ import pytest
 
 from ptahlmud.datastack.clients.remote_client import RemoteClient
 from ptahlmud.datastack.fluctuations import Fluctuations
-from ptahlmud.datastack.fluctuations_repository import FilesMapper, FluctuationsRepository
 from ptahlmud.datastack.fluctuations_service import CustomOperation, FluctuationsService, FluctuationsSpecs
 from ptahlmud.datastack.testing.fluctuations import generate_fluctuations
 from ptahlmud.types import Period
@@ -28,7 +27,7 @@ class MockedClient(RemoteClient):
 def mocked_service(tmp_path):
     return FluctuationsService(
         client=MockedClient(),
-        repository=FluctuationsRepository(database=FilesMapper(root=tmp_path)),
+        savedir=tmp_path,
     )
 
 
