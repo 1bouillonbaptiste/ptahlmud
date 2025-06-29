@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from ptahlmud.types import Period
+from ptahlmud.core.period import Period
 
 MANDATORY_COLUMNS = ["open_time", "close_time", "open", "high", "low", "close"]
 

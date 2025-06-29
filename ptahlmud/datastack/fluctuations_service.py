@@ -17,11 +17,11 @@ import pandas as pd
 from pydantic import BaseModel
 from tqdm import tqdm
 
+from ptahlmud.core import Period
 from ptahlmud.core.fluctuations import Fluctuations
 from ptahlmud.datastack.clients.remote_client import RemoteClient
 from ptahlmud.datastack.custom_operations import CustomOperation, get_operation, register_operation
 from ptahlmud.datastack.fluctuations_repository import FilesMapper, FluctuationsRepository
-from ptahlmud.types import Period
 
 
 @dataclass

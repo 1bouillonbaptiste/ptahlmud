@@ -18,7 +18,7 @@ from ptahlmud.backtesting.operations import (
 )
 from ptahlmud.backtesting.position import Position, Trade
 from ptahlmud.backtesting.testing.candles import generate_candles
-from ptahlmud.types.period import Period
+from ptahlmud.core import Period
 
 
 @pytest.fixture

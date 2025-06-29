@@ -3,8 +3,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from ptahlmud.core import Period
 from ptahlmud.core.fluctuations import Fluctuations
-from ptahlmud.types import Period
 
 
 def generate_fluctuations(

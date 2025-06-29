@@ -2,7 +2,7 @@ import datetime
 
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.types.period import Period
+from ptahlmud.core.period import Period
 
 
 class ToTimedeltaCases:

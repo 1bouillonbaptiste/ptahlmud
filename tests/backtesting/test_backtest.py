@@ -10,7 +10,7 @@ from ptahlmud.backtesting.backtest import MatchedSignal, RiskConfig, _match_sign
 from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.backtesting.testing.candles import generate_candles
-from ptahlmud.types.period import Period
+from ptahlmud.core import Period
 
 
 class MatchedSignalsCases:
