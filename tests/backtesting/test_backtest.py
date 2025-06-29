@@ -9,8 +9,8 @@ from pytest_cases import parametrize_with_cases
 from ptahlmud.backtesting.backtest import MatchedSignal, RiskConfig, _match_signals, process_signals
 from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.portfolio import Portfolio
-from ptahlmud.backtesting.testing.candles import generate_candles
 from ptahlmud.core import Period
+from ptahlmud.testing.fluctuations import generate_fluctuations
 
 
 class MatchedSignalsCases:
@@ -111,13 +111,13 @@ def some_risk_config(draw) -> RiskConfig:
 def test_process_signals_trades_property(signals: list[Signal], risk_config: RiskConfig):
     """Check that trades are correctly generated from signals."""
     period = Period(timeframe="1m")
-    random_candles = generate_candles(
+    fluctuations = generate_fluctuations(
         from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=6), period=period
     )
     trades = process_signals(
         signals=signals,
         risk_config=risk_config,
-        candles=random_candles,
+        fluctuations=fluctuations,
     )
 
     # we don't trade when there is no capital, so we can have fewer trades than entry signals.
@@ -135,10 +135,10 @@ def test_process_signals_trades_property(signals: list[Signal], risk_config: Ris
 )
 def test_process_signals_portfolio_validity(signals: list[Signal], risk_config: RiskConfig):
     """Check that the portfolio state remains valid throughout the backtest."""
-    random_candles = generate_candles(
+    fluctuations = generate_fluctuations(
         from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=6), period=Period(timeframe="1m")
     )
-    trades = process_signals(signals=signals, risk_config=risk_config, candles=random_candles)
+    trades = process_signals(signals=signals, risk_config=risk_config, fluctuations=fluctuations)
 
     if trades:
         portfolio = Portfolio(starting_date=trades[0].open_date)
