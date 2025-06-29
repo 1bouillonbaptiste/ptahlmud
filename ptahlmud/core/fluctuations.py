@@ -68,11 +68,12 @@ class Fluctuations:
         candle_total_minutes = int((first_candle["close_time"] - first_candle["open_time"]).total_seconds()) // 60
         return Period(timeframe=str(candle_total_minutes) + "m")
 
-    def subset(self, from_date: datetime, to_date: datetime) -> "Fluctuations":
+    def subset(self, from_date: datetime | None = None, to_date: datetime | None = None) -> "Fluctuations":
         """Select the candles between the given dates as a new instance of `Fluctuations`."""
         return Fluctuations(
             dataframe=self.dataframe[
-                (self.dataframe["open_time"] >= from_date) & (self.dataframe["open_time"] < to_date)
+                (self.dataframe["open_time"] >= (from_date or self.earliest_open_time))
+                & (self.dataframe["open_time"] < (to_date or self.latest_close_time))
             ]
         )
 
