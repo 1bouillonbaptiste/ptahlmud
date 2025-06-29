@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 from binance.client import Client
 
+from ptahlmud.core.fluctuations import Fluctuations
 from ptahlmud.datastack.clients.remote_client import RemoteClient
-from ptahlmud.datastack.fluctuations import Fluctuations
 from ptahlmud.types import Period
 
 

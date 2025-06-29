@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Protocol
 
-from ptahlmud.datastack.fluctuations import Fluctuations
+from ptahlmud.core.fluctuations import Fluctuations
 
 
 class RemoteClient(Protocol):

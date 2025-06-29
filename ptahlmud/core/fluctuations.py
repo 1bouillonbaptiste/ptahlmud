@@ -1,6 +1,10 @@
-"""Define fluctuations concept.
+"""Define 'fluctuations'.
 
-The `Fluctuations` class is a wrapper above a pandas dataframe for market data manipulation.
+Market fluctuations are a time-series of financial candles.
+A candle is a financial object that represents the price variation of any asset during a period of time.
+Candles _must_ have an open, high, low and close price, an open and close time.
+
+The `Fluctuations` class is a wrapper around a pandas DataFrame.
 """
 
 from datetime import datetime
@@ -9,17 +13,18 @@ import pandas as pd
 
 from ptahlmud.types import Period
 
+MANDATORY_COLUMNS = ["open_time", "close_time", "open", "high", "low", "close"]
+
 
 class Fluctuations:
     """Interface for market fluctuations.
 
-    Attributes:
+    Args:
         dataframe: pandas dataframe containing market data.
     """
 
     def __init__(self, dataframe: pd.DataFrame):
         """Load fluctuations from a pandas DataFrame."""
-        MANDATORY_COLUMNS = ["open_time", "close_time", "open", "high", "low", "close"]
         for column in MANDATORY_COLUMNS:
             if column not in dataframe.columns:
                 raise ValueError(f"Missing column '{column}' in fluctuations.")
@@ -35,8 +40,8 @@ class Fluctuations:
 
     @classmethod
     def empty(cls) -> "Fluctuations":
-        """Create an empty fluctuations."""
-        return cls(dataframe=pd.DataFrame(columns=["open_time", "close_time", "open", "high", "low", "close"]))
+        """Generate an empty fluctuations instance."""
+        return cls(dataframe=pd.DataFrame(columns=MANDATORY_COLUMNS))
 
     @property
     def size(self) -> int:
@@ -57,14 +62,13 @@ class Fluctuations:
 
     @property
     def period(self) -> Period:
-        """Get the duration in minutes of fluctuations items."""
+        """The time duration of the fluctuations as a `Period` object, assume every candle shares the same period."""
         first_candle = self.dataframe.iloc[0]
-        minutes = int((first_candle["close_time"] - first_candle["open_time"]).total_seconds()) // 60
-        timeframe = str(minutes) + "m"
-        return Period(timeframe)
+        candle_total_minutes = int((first_candle["close_time"] - first_candle["open_time"]).total_seconds()) // 60
+        return Period(timeframe=str(candle_total_minutes) + "m")
 
     def subset(self, from_date: datetime, to_date: datetime) -> "Fluctuations":
-        """Create a new instance from rows within a specified date range."""
+        """Select the candles between the given dates as a new instance of `Fluctuations`."""
         return Fluctuations(
             dataframe=self.dataframe[
                 (self.dataframe["open_time"] >= from_date) & (self.dataframe["open_time"] < to_date)
