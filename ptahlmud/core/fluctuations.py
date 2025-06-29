@@ -7,6 +7,7 @@ Candles _must_ have an open, high, low and close price, an open and close time.
 The `Fluctuations` class is a wrapper around a pandas DataFrame.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 
 import pandas as pd
@@ -74,3 +75,35 @@ class Fluctuations:
                 (self.dataframe["open_time"] >= from_date) & (self.dataframe["open_time"] < to_date)
             ]
         )
+
+
+@dataclass(slots=True, frozen=True)
+class Candle:
+    """Represent a candle.
+
+    Since we instantiate potentially billions of candles, we require a lightweight object.
+    We don't use pydantic model for performance reason.
+    We don't use a NamedTuple because we need to access candle's attributes frequently.
+
+    Attributes:
+        open: price the candle opened at.
+        high: price the candle reached at its highest point.
+        low: price the candle reached at its lowest point.
+        close: price the candle closed at.
+        open_time: time the candle opened.
+        close_time: time the candle closed.
+        high_time: time the candle reached its highest point.
+        low_time: time the candle reached its lowest point.
+
+    """
+
+    open: float
+    high: float
+    low: float
+    close: float
+
+    open_time: datetime
+    close_time: datetime
+
+    high_time: datetime | None = None
+    low_time: datetime | None = None
