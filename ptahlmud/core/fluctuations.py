@@ -77,6 +77,12 @@ class Fluctuations:
             ]
         )
 
+    def first_candles(self, n: int) -> "Fluctuations":
+        """Return the first `n` candles as a new instance of `Fluctuations`."""
+        if n > self.size:
+            raise ValueError("Number of candles to subset is greater than the number of available candles.")
+        return Fluctuations(dataframe=self.dataframe.iloc[:n])
+
 
 @dataclass(slots=True, frozen=True)
 class Candle:
