@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ptahlmud.datastack.fluctuations import Fluctuations
+from ptahlmud.core.fluctuations import Fluctuations
 
 
 class FilesMapper:

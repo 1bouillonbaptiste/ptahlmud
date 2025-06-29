@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 
 from ptahlmud.backtesting.models.candle import Candle
-from ptahlmud.types.period import Period
+from ptahlmud.core.period import Period
 
 
 def generate_candles(

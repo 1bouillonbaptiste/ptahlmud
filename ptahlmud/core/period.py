@@ -1,4 +1,4 @@
-"""Define `Period` type.
+"""Define a `period`.
 
 Financial time series are either by **tick** or **time-based***.
 Tick data records every transaction that occurs in the market,
