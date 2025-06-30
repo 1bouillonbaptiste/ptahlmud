@@ -1,24 +1,23 @@
-"""Helper to generate random entities."""
-
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 
-from ptahlmud.backtesting.models.candle import Candle
-from ptahlmud.core.period import Period
+from ptahlmud.core import Period
+from ptahlmud.core.fluctuations import Fluctuations
 
 
-def generate_candles(
+def generate_fluctuations(
     size: int = 1000,
     period: Period | None = None,
     from_date: datetime | None = None,
     to_date: datetime | None = None,
-) -> list[Candle]:
-    """Generate random plausible candles.
+) -> Fluctuations:
+    """Generate randomized fluctuations.
 
     Args:
         size: number of candles to generate
-        period: the time duration of each candle
+        period: the time duration of each data item
         from_date: earliest open date
         to_date: latest close date
 
@@ -50,19 +49,13 @@ def generate_candles(
     open_dates = [initial_open_time + ii * period.to_timedelta() for ii in range(size)]
     close_dates = [open_date + period.to_timedelta() for open_date in open_dates]
 
-    candles: list[Candle] = [
-        Candle(
-            open=round(float(open_price), 3),
-            high=round(float(high_price), 3),
-            low=round(float(low_price), 3),
-            close=round(float(close_price), 3),
-            open_time=open_time,
-            close_time=close_time,
-            high_time=None,
-            low_time=None,
-        )
-        for open_price, high_price, low_price, close_price, open_time, close_time in zip(
-            opens, highs, lows, closes, open_dates, close_dates, strict=False
-        )
-    ]
-    return candles
+    candles = {
+        "open_time": open_dates,
+        "close_time": close_dates,
+        "open": opens,
+        "high": highs,
+        "low": lows,
+        "close": closes,
+    }
+    dataframe = pd.DataFrame(candles)
+    return Fluctuations(dataframe=dataframe)

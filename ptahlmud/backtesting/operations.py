@@ -4,9 +4,10 @@ from decimal import Decimal
 from typing import Literal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
-from ptahlmud.backtesting.models.candle import Candle, CandleCollection
 from ptahlmud.backtesting.models.signal import Side
 from ptahlmud.backtesting.position import Position, Trade
+from ptahlmud.core import Fluctuations
+from ptahlmud.core.fluctuations import Candle
 
 
 @dataclass(slots=True)
@@ -90,7 +91,7 @@ def _get_position_exit_mode(position: Position, candle: Candle) -> ExitMode:
     return ExitMode(price_signal="hold", date_signal="hold")
 
 
-def _close_position(position: Position, candles: CandleCollection) -> Trade:
+def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
     """Simulate the trade resulting from the position and market data.
 
     The position is monitored candle by candle until:
@@ -99,7 +100,7 @@ def _close_position(position: Position, candles: CandleCollection) -> Trade:
 
     Args:
         position: the open position to simulate
-        candles: market data
+        fluctuations: market data
 
     Returns:
         the closed position as a new `Trade` instance
@@ -107,22 +108,22 @@ def _close_position(position: Position, candles: CandleCollection) -> Trade:
     Raises:
         ValueError: if the position opens after all available market data
     """
-    candles_subset = candles.subset(from_date=position.open_date)
+    fluctuations_subset = fluctuations.subset(from_date=position.open_date)
 
-    if candles_subset.size == 0:
+    if fluctuations_subset.size == 0:
         raise ValueError(
             f"Position opened at {position.open_date} but market data ends before that date. "
-            f"Latest available data: {candles_subset.candles[-1].close_time}"
+            f"Latest available data: {fluctuations_subset.latest_close_time}"
         )
 
-    for candle in candles_subset.candles:
+    for candle in fluctuations_subset.iter_candles():
         signal = _get_position_exit_mode(position=position, candle=candle)
 
         if not signal.hold_position:
             close_price, close_date = signal.to_price_date(position=position, candle=candle)
             return position.close(close_date=close_date, close_price=close_price)
 
-    last_candle = candles_subset.candles[-1]
+    last_candle = fluctuations_subset.dataframe.iloc[-1]
     return position.close(
         close_date=last_candle.close_time,
         close_price=Decimal(str(last_candle.close)),
@@ -132,12 +133,12 @@ def _close_position(position: Position, candles: CandleCollection) -> Trade:
 def calculate_trade(
     open_at: datetime,
     money_to_invest: Decimal,
-    candles: CandleCollection,
+    fluctuations: Fluctuations,
     target: BarrierLevels,
     side: Side,
 ) -> Trade:
     """Calculate a trade."""
-    candle = candles.get_candle_at(open_at)
+    candle = fluctuations.get_candle_at(open_at)
     if open_at > candle.open_time:
         open_date = candle.close_time
         open_price = candle.close
@@ -153,4 +154,4 @@ def calculate_trade(
         higher_barrier=Decimal(str(target.high_value(open_price))),
         lower_barrier=Decimal(str(target.low_value(open_price))),
     )
-    return _close_position(position, candles)
+    return _close_position(position, fluctuations)
