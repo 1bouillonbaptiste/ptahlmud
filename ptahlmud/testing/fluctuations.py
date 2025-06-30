@@ -49,21 +49,13 @@ def generate_fluctuations(
     open_dates = [initial_open_time + ii * period.to_timedelta() for ii in range(size)]
     close_dates = [open_date + period.to_timedelta() for open_date in open_dates]
 
-    candles: list[pd.DataFrame] = [
-        pd.DataFrame(
-            {
-                "open_time": open_time,
-                "close_time": close_time,
-                "open": round(float(open_price), 3),
-                "high": round(float(high_price), 3),
-                "low": round(float(low_price), 3),
-                "close": round(float(close_price), 3),
-            },
-            index=[0],
-        )
-        for open_price, high_price, low_price, close_price, open_time, close_time in zip(
-            opens, highs, lows, closes, open_dates, close_dates, strict=False
-        )
-    ]
-    dataframe = pd.concat(candles).reset_index(drop=True)
+    candles = {
+        "open_time": open_dates,
+        "close_time": close_dates,
+        "open": opens,
+        "high": highs,
+        "low": lows,
+        "close": closes,
+    }
+    dataframe = pd.DataFrame(candles)
     return Fluctuations(dataframe=dataframe)
