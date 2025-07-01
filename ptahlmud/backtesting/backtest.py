@@ -9,7 +9,7 @@ market interactions according to risk management rules. It handles:
 4. Portfolio tracking (recording changes in capital and asset holdings)
 
 The core functionality is encapsulated in `process_signals()`, which transforms
-a sequence of raw trading signals into a list of executed trades and an updated portfolio.
+a sequence of raw trading signals into a list of executed trades under historical market data.
 """
 
 from dataclasses import dataclass
@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.operations import BarrierLevels, calculate_trade
 from ptahlmud.backtesting.portfolio import Portfolio
-from ptahlmud.backtesting.position import Trade
+from ptahlmud.backtesting.positions import Trade
 from ptahlmud.core import Fluctuations
 
 
@@ -29,7 +29,7 @@ class RiskConfig(BaseModel):
     """Define risk management parameters for trading.
 
     Risk management is crucial for protecting trading capital. This configuration
-    determines how much capital to risk per trade and when to exit positions.
+    determines how much capital to risk per trade and how long to hold the position.
 
     Attributes:
         size: the fraction of available capital to allocate to each trade
@@ -69,9 +69,9 @@ class MatchedSignal:
 
 
 def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
-    """Group entry signals with their corresponding exit signals.
+    """Group entry signals with exit signals.
 
-    This function pairs ENTER signals with the next EXIT signal of the matching side.
+    This function pairs ENTER signals with an EXIT signal of the matching side.
     One EXIT signal can close multiple ENTER signals of the same side.
 
     Args:

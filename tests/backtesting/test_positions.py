@@ -8,7 +8,7 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 
 from ptahlmud.backtesting.models.signal import Side
-from ptahlmud.backtesting.position import Position
+from ptahlmud.backtesting.positions import Position
 
 
 @pytest.fixture
@@ -51,12 +51,12 @@ def valid_position_parameters(draw) -> dict[str, Any]:
 
     side = draw(some.sampled_from([Side.LONG, Side.SHORT]))
 
-    # Ensure higher barrier > open_price
+    # Ensure the higher barrier > open_price
     higher_barrier = draw(
         some.decimals(min_value=open_price * Decimal("1.001"), max_value=open_price * Decimal("1000"))
     )
 
-    # Ensure lower barrier < open_price
+    # Ensure the lower barrier < open_price
     lower_barrier = draw(some.decimals(min_value=open_price * Decimal("0.0"), max_value=open_price * Decimal("0.999")))
 
     return {

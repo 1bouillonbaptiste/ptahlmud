@@ -1,11 +1,10 @@
-"""Define trading portfolios elements.
+"""Define a trading portfolio..
 
 This module defines the `Portfolio`, `WealthItem`, and `WealthSeries` classes, which collectively
 represent and manage a trading portfolio's state and its evolution over time.
 
 Key concepts:
-- `WealthItem`: Represents the portfolio's wealth at a specific time, including asset volume
-  and available currency.
+- `WealthItem`: Represents the portfolio's wealth at a specific time.
 - `WealthSeries`: A time series of `WealthItem` instances combined with entry points to track
   wealth changes.
 - `Portfolio`: A higher-level class for managing trading activities, updating portfolio
@@ -18,15 +17,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from ptahlmud.backtesting.position import Trade
+from ptahlmud.backtesting.positions import Trade
 
 
 @dataclass(slots=True)
 class WealthItem:
-    """Represent the wealth of a portfolio at a given point in time.
-
-    `WealthItem` combines the current amount of currency and the volume of the traded
-    asset, ensuring no negative amounts can occur.
+    """Represent the coin volume and currency available at a specific time.
 
     Attributes:
         date: the timestamp the wealth data refers to
@@ -57,10 +53,10 @@ class WealthItem:
 
 @dataclass
 class WealthSeries:
-    """Store and track portfolio wealth changes over time.
+    """Collection of `WealthItem`.
 
-    The `WealthSeries` class maintains a sequence of `WealthItem` objects to record changes
-    in portfolio wealth, along with entries defining when the portfolio enters the market.
+    The `WealthSeries` is responsible for knowing the wealth state at any time.
+    It can register new operations and update the wealth state accordingly.
 
     Attributes:
         items: list of `WealthItem` instances, ordered by timestamp
@@ -70,6 +66,11 @@ class WealthSeries:
     items: list[WealthItem]
     entries: list[datetime]
 
+    @classmethod
+    def start_with(cls, date: datetime, currency: Decimal, asset: Decimal) -> "WealthSeries":
+        """Create a new `WealthSeries` with an initial wealth state."""
+        return cls(items=[WealthItem(date=date, asset=asset, currency=currency)], entries=[])
+
     def entries_after(self, date: datetime) -> bool:
         """Check if there are any entries after a given date."""
         if not self.entries:
@@ -77,12 +78,12 @@ class WealthSeries:
         return date < self.entries[-1]
 
     def get_currency_at(self, date: datetime) -> Decimal:
-        """Return the money free to be invested."""
+        """Return the money free to be invested at a given date."""
         item_index = _find_date_position(date=date, date_collection=[item.date for item in self.items]) - 1
         return self.items[item_index].currency
 
     def get_asset_at(self, date: datetime) -> Decimal:
-        """Return the money free to be invested."""
+        """Return the locked asset volume at a given date."""
         item_index = _find_date_position(date=date, date_collection=[item.date for item in self.items]) - 1
         return self.items[item_index].asset
 
@@ -93,7 +94,7 @@ class WealthSeries:
         self.entries.insert(_find_date_position(date, self.entries), date)
 
     def update_wealth(self, date: datetime, currency_difference: Decimal, asset_difference: Decimal) -> None:
-        """Update wealth values for the portfolio at and after the specified date."""
+        """Update wealth values from `date` with the given differences."""
         before_item_index = _find_date_position(date, [item.date for item in self.items]) - 1
         before_item = self.items[before_item_index]
         new_item = WealthItem(
@@ -131,14 +132,9 @@ class Portfolio:
     wealth_series: WealthSeries
 
     def __init__(self, starting_date: datetime):
-        wealth_items = [
-            WealthItem(
-                date=starting_date,
-                asset=self.default_asset_amount(),
-                currency=self.default_currency_amount(),
-            )
-        ]
-        self.wealth_series = WealthSeries(items=wealth_items, entries=[])
+        self.wealth_series = WealthSeries.start_with(
+            date=starting_date, currency=self.default_currency_amount(), asset=self.default_asset_amount()
+        )
 
     @staticmethod
     def default_currency_amount() -> Decimal:
@@ -162,23 +158,23 @@ class Portfolio:
         self.wealth_series.update_wealth(date=date, currency_difference=-currency_amount, asset_difference=asset_volume)
 
     def _perform_exit(self, date: datetime, currency_amount: Decimal, asset_volume: Decimal) -> None:
-        """Record market exit by selling assets."""
+        """Record market exit by selling hold asset volume."""
         if self.wealth_series.get_asset_at(date) < asset_volume:
             raise ValueError("Cannot exit the market, asset volume too small.")
 
         self.wealth_series.update_wealth(date=date, currency_difference=currency_amount, asset_difference=-asset_volume)
 
     def update_from_trade(self, trade: Trade) -> None:
-        """Update the portfolio based on a completed trade."""
+        """Update the portfolio after a trade is completed."""
         self._perform_entry(trade.open_date, currency_amount=trade.initial_investment, asset_volume=trade.volume)
         self._perform_exit(
             trade.close_date, asset_volume=trade.volume, currency_amount=trade.total_profit + trade.initial_investment
         )
 
     def get_available_capital_at(self, date: datetime) -> Decimal:
-        """Retrieve the available currency at a specific date."""
+        """Return the available currency at a specific date."""
         return self.wealth_series.get_currency_at(date)
 
     def get_asset_volume_at(self, date: datetime) -> Decimal:
-        """Retrieve the available asset volume at a specific date."""
+        """Return the available asset volume at a specific date."""
         return self.wealth_series.get_asset_at(date)

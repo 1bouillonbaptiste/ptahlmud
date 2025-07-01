@@ -1,6 +1,6 @@
 [project]
 name = "ptahlmud"
-version = "0.0.5"
+version = "0.0.6"
 description = "Trading strategies crafting tools"
 authors = [
     {name="Baptiste Bouillon", email="1bouillonbaptiste@gmail.com"},

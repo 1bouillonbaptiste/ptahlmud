@@ -128,7 +128,17 @@ class FluctuationsService:
 
 
 def _register_operations(custom_operations: list[CustomOperation]) -> list[str]:
-    """Register custom operations in the global scope."""
+    """Register custom operations in the global scope.
+
+    This function registers custom operations globally so they can be accessed
+    later in multiprocessing contexts where functions cannot be passed as arguments.
+
+    Args:
+        custom_operations: custom operations to register globally
+
+    Returns:
+        operation names that were registered as a list
+    """
     operations_names = []
     for custom_operation in custom_operations:
         register_operation(custom_operation)
@@ -137,14 +147,37 @@ def _register_operations(custom_operations: list[CustomOperation]) -> list[str]:
 
 
 def _get_operations(operations_names: list[str]) -> list[CustomOperation]:
-    """Access custom operations from the global scope."""
+    """Access custom operations from the global scope.
+
+    Retrieves previously registered custom operations by their names.
+    This is used in multiprocessing contexts where operations need to be
+    retrieved rather than passed as arguments.
+
+    Args:
+        operations_names: operation names to retrieve
+
+    Returns:
+        custom operations corresponding to the given names
+    """
     return [get_operation(name) for name in operations_names]
 
 
 def _process_config_chunk(
     specs: FluctuationsSpecs, repository: FluctuationsRepository, operations_names: list[str]
 ) -> Fluctuations:
-    """Process a single configuration chunk - used for multiprocessing."""
+    """Process a single configuration chunk - used for multiprocessing.
+
+    Queries fluctuations data from the repository for the given specifications
+    and converts it to the requested period with custom operations applied.
+
+    Args:
+        specs: fluctuations specifications defining the data to retrieve
+        repository: repository instance for querying fluctuations data
+        operations_names: names of custom operations to apply when converting the timeframe
+
+    Returns:
+        fluctuations data converted to the specified period with custom operations applied
+    """
     chunk_fluctuations = repository.query(
         coin=specs.coin,
         currency=specs.currency,
@@ -161,10 +194,33 @@ def _process_config_chunk(
 
 
 def _build_aggregation_function(custom_operations: list[CustomOperation]) -> Callable[[pd.DataFrame], pd.Series]:
-    """Create a pandas aggregation function with custom operations."""
+    """Create a pandas aggregation function with custom operations.
+
+    Builds a custom aggregation function that can be used with pandas resample
+    to aggregate fluctuations data while preserving OHLC (Open, High, Low, Close)
+    semantics and applying custom operations.
+
+    Args:
+        custom_operations: custom operations to include in the aggregation
+
+    Returns:
+        Aggregation function that takes a DataFrame group and returns a Series
+        with aggregated OHLC data and custom operation results.
+    """
 
     def custom_agg(group: pd.DataFrame) -> pd.Series:
-        """Define how to aggregate a dataframe to a series."""
+        """Define how to aggregate a dataframe to a series.
+
+        Aggregates a group of fluctuations data into a single row, preserving
+        OHLC semantics (first open, max high, min low, last close) and applying
+        custom operations.
+
+        Args:
+            group: dataFrame containing fluctuations data for a time period
+
+        Returns:
+            aggregated OHLC data and custom operation results as a pandas Series
+        """
         if len(group) == 0:
             return pd.Series(
                 {
@@ -203,7 +259,23 @@ def _build_aggregation_function(custom_operations: list[CustomOperation]) -> Cal
 def _convert_fluctuations_to_period(
     fluctuations: Fluctuations, period: Period, custom_operations: list[CustomOperation]
 ) -> Fluctuations:
-    """Merge fluctuations so that each row has a period of `period`."""
+    """Merge fluctuations so that each row has a period of `period`.
+
+    Converts fluctuations data from its original timeframe to the specified period
+    by resampling and aggregating the data while preserving OHLC semantics.
+
+    Args:
+        fluctuations: fluctuations data to convert
+        period: the target period to convert fluctuations data
+        custom_operations: custom operations to apply during aggregation
+
+    Returns:
+        fluctuations data converted to the specified period
+
+    Note:
+        The last candle may be removed if it's incomplete (when the period
+        is not a multiple of the date range).
+    """
     if fluctuations.size == 0:
         return fluctuations
     custom_aggregation = _build_aggregation_function(custom_operations)
@@ -229,7 +301,7 @@ def _convert_fluctuations_to_period(
 
 
 def _merge_fluctuations(fluctuations_chunks: list[Fluctuations]) -> Fluctuations:
-    """Concatenate fluctuations to a single dataframe."""
+    """Merge fluctuations to a single instance."""
     if not fluctuations_chunks:
         return Fluctuations.empty()
     merged_fluctuations = (
