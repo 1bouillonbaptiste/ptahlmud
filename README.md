@@ -1,3 +1,5 @@
+from ptahlmud.core import Fluctuations
+
 # ptahlmud
 
 Python library for crafting and backtesting trading strategies.
@@ -24,10 +26,24 @@ Here's a simple example of defining trading signals and running a backtest:
 
 ```python
 from datetime import datetime
+from pathlib import Path
 
+from ptahlmud.backtesting.models import Signal, Side, Action
 from ptahlmud.backtesting.backtest import RiskConfig, process_signals
-from ptahlmud.entities.fluctuations import Fluctuations
-from ptahlmud.backtesting.models.signal import Signal, Side, Action
+from ptahlmud.datastack import FluctuationsService, BinanceClient, FluctuationsSpecs
+
+client = BinanceClient(binance_secret="", binance_key="")
+service = FluctuationsService(client, savedir=Path("/data/fluctuations_data"))
+
+specifications = FluctuationsSpecs(
+    coin="BTC", currency="USDT",
+    from_date=datetime(2023, 1, 1),
+    to_date=datetime(2023, 2, 1),
+)
+
+# Fetch and load the historical market data
+service.fetch(specifications)
+fluctuations = service.request(specifications)
 
 # Define trading signals
 signals = [
@@ -44,14 +60,11 @@ risk_config = RiskConfig(
     stop_loss=0.03,  # Cut losses at 3% price decrease
 )
 
-# You will need to implement this for your data source
-candles = generate_candles(from_date=datetime(2023, 1, 1), to_date=datetime(2023, 3, 1))
-
 # Run the backtest
 trades = process_signals(
     signals=signals,
     risk_config=risk_config,
-    candles=candles,
+    fluctuations=fluctuations,
 )
 
 # Analyze results
@@ -71,43 +84,32 @@ You can define custom trading strategies by creating signals based on technical 
 from ptahlmud.backtesting.models.signal import Signal, Side, Action
 
 
-def moving_average_strategy(fluctuations, fast_period: int, slow_period: int) -> list[Signal]:
-    """Simple moving average crossover strategy."""
-    signals: list[Signal] = []
-
+def moving_average_strategy(fluctuations: Fluctuations, fast_period: int, slow_period: int) -> list[Signal]:
+    """Moving average crossover strategy."""
     # Calculate moving averages (simplified example)
-    fast_ma = calculate_moving_average(fluctuations, fast_period)
-    slow_ma = calculate_moving_average(fluctuations, slow_period)
+    fast_ma = fluctuations.dataframe["close"].rolling(fast_period).mean()
+    slow_ma = fluctuations.dataframe["close"].rolling(slow_period).mean()
 
-    # Generate signals on crossovers
-    for index, candle in enumerate(fluctuations.candles):
-        # fast ma crossed above slow ma
-        if fast_ma[index - 1] < slow_ma[index - 1] and fast_ma[index] > slow_ma[index]:
-            signals.append(Signal(
-                date=candle.close_time,
-                side=Side.LONG,
-                action=Action.ENTER
-            ))
+    ma_crossover = (fast_ma < slow_ma) & (fast_ma.shift(1) > slow_ma.shift(1))
+    crossover_df = fluctuations.dataframe[ma_crossover]
 
-        # slow ma crossed bellow slow ma
-        if fast_ma[index - 1] > slow_ma[index - 1] and fast_ma[index] < slow_ma[index]:
-            signals.append(Signal(
-                date=candle.close_time,
-                side=Side.LONG,
-                action=Action.EXIT
-            ))
+    signals: list[Signal] = []
+    for _, row in crossover_df.iterrows():
+        signals.append(Signal(
+            date=row["close_time"],
+            action=Action.ENTER,
+            side=Side.LONG
+        ))
 
     return signals
 
 
-signals = moving_average_strategy(market_date, fast_period=10, slow_period=30)
+signals = moving_average_strategy(fluctuations, fast_period=10, slow_period=30)
 trades = process_signals(
     signals=signals,
-    fluctuations=market_date,
     risk_config=risk_config,
+    fluctuations=fluctuations,
 )
-
-
 ```
 
 ## Development
