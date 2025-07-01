@@ -1,3 +1,5 @@
+""" """
+
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -5,7 +7,7 @@ from typing import Literal
 
 from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.signal import Side
-from ptahlmud.backtesting.position import Position, Trade
+from ptahlmud.backtesting.positions import Position, Trade
 from ptahlmud.core import Fluctuations
 from ptahlmud.core.fluctuations import Candle
 
@@ -18,15 +20,10 @@ class ExitMode:
     An exit mode determines both when and at what price a position should be closed.
 
     Exit mode can represent:
-    1. Take profit scenarios (when price reaches the higher barrier)
-    2. Stop loss scenarios (when the price reaches the lower barrier)
-    3. Time-based closes (at candle close time)
-    4. Hold instructions (maintain the position)
-
-    This class combines two information:
-    * price information - which price to use for exiting the market
-    * time information - at which time the position must be closed.
-
+    1. Take-profit scenario, when price reaches the higher barrier
+    2. Stop-loss scenario, when the price reaches the lower barrier
+    3. Time-based closes, at candle close time
+    4. Hold, maintain the position
     """
 
     price_signal: Literal["high_barrier", "low_barrier", "close", "hold"]
@@ -61,10 +58,10 @@ class ExitMode:
                 date = candle.close_time
             case "hold":
                 date = datetime(1900, 1, 1)
-        return price, date  # price and date are always set
+        return price, date
 
 
-def _get_position_exit_mode(position: Position, candle: Candle) -> ExitMode:
+def _check_exit_conditions(position: Position, candle: Candle) -> ExitMode:
     """Check if a candle reaches position to take profit or stop loss."""
     price_reach_tp = candle.high >= position.higher_barrier
     price_reach_sl = candle.low <= position.lower_barrier
@@ -117,7 +114,7 @@ def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
         )
 
     for candle in fluctuations_subset.iter_candles():
-        signal = _get_position_exit_mode(position=position, candle=candle)
+        signal = _check_exit_conditions(position=position, candle=candle)
 
         if not signal.hold_position:
             close_price, close_date = signal.to_price_date(position=position, candle=candle)

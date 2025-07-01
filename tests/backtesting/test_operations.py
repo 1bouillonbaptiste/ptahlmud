@@ -12,10 +12,10 @@ from ptahlmud.backtesting.models.barriers import BarrierLevels
 from ptahlmud.backtesting.models.signal import Side
 from ptahlmud.backtesting.operations import (
     ExitMode,
-    _get_position_exit_mode,
+    _check_exit_conditions,
     calculate_trade,
 )
-from ptahlmud.backtesting.position import Position, Trade
+from ptahlmud.backtesting.positions import Position, Trade
 from ptahlmud.core import Fluctuations, Period
 from ptahlmud.core.fluctuations import Candle
 from ptahlmud.testing.fluctuations import generate_fluctuations
@@ -46,8 +46,8 @@ def candle() -> Candle:
     )
 
 
-class GetPositionExitModeCases:
-    """Generate cases for `_get_position_exit_signal()`.
+class CheckExitConditionsCases:
+    """Generate cases for `_check_exit_conditions()`.
 
     Each case returns:
     - a position to analyse
@@ -120,9 +120,9 @@ class GetPositionExitModeCases:
         )
 
 
-@parametrize_with_cases("position, current_candle, expected_signal", cases=GetPositionExitModeCases)
-def test__get_position_exit_mode(position: Position, current_candle: Candle, expected_signal: ExitMode):
-    signal = _get_position_exit_mode(position, current_candle)
+@parametrize_with_cases("position, current_candle, expected_signal", cases=CheckExitConditionsCases)
+def test__check_exit_conditions(position: Position, current_candle: Candle, expected_signal: ExitMode):
+    signal = _check_exit_conditions(position, current_candle)
     assert signal == expected_signal
 
 

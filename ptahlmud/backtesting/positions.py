@@ -1,8 +1,5 @@
 """Define trading entities for backtesting.
 
-This module contains the `Position` and `Trade` classes, which are essential
-components for simulating trades in a backtesting environment.
-
 - A `Position` represents the active market exposure held by a trader, with attributes
   such as open price, barriers for take profit or stop loss, and the initial amount invested.
 - A `Trade` extends `Position` and represents a completed trade, including the closing
@@ -115,6 +112,15 @@ class Trade(Position):
     close_date: datetime
     close_price: Decimal
 
+    @classmethod
+    def open(cls, *args, **kwargs) -> None:
+        """Prevent opening trades directly.
+
+        A `Trade` _must_ be created by closing from `Position.open()`.
+        """
+
+        raise RuntimeError("Cannot open a trade, please open a position instead.")
+
     @property
     def receipt(self) -> Decimal:
         """The amount of money received after closing the trade."""
@@ -124,15 +130,6 @@ class Trade(Position):
             price_diff = self.open_price - self.close_price
 
         return self.volume * price_diff + self.initial_investment - self.open_fees
-
-    @classmethod
-    def open(cls, *args, **kwargs) -> None:
-        """Prevent opening trades directly.
-
-        A `Trade` _must_ be created by closing a `Position`.
-        """
-
-        raise RuntimeError("Cannot open a trade, please use `Position.open()` instead.")
 
     @property
     def close_fees(self) -> Decimal:
