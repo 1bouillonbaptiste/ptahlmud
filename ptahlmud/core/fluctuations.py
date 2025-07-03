@@ -47,7 +47,6 @@ class Candle:
 
     open_time: datetime
     close_time: datetime
-
     high_time: datetime | None = None
     low_time: datetime | None = None
 
