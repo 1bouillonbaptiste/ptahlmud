@@ -6,37 +6,52 @@ The `Fluctuations` class is a wrapper above a pandas dataframe for market data m
 from datetime import datetime
 
 import pandas as pd
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from ptahlmud.types import Period
 
 
-class Fluctuations:
+class Fluctuations(BaseModel):
     """Interface for market fluctuations.
 
     Attributes:
         dataframe: pandas dataframe containing market data.
     """
 
-    def __init__(self, dataframe: pd.DataFrame):
-        """Load fluctuations from a pandas DataFrame."""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    dataframe: pd.DataFrame
+
+    @model_validator(mode="after")
+    def validate_mandatory_columns(self):
+        """Check columns are present in the dataframe."""
         MANDATORY_COLUMNS = ["open_time", "close_time", "open", "high", "low", "close"]
         for column in MANDATORY_COLUMNS:
-            if column not in dataframe.columns:
+            if column not in self.dataframe.columns:
                 raise ValueError(f"Missing column '{column}' in fluctuations.")
+        return self
 
-        dataframe.loc[:, "open_time"] = pd.to_datetime(dataframe["open_time"])
-        dataframe.loc[:, "close_time"] = pd.to_datetime(dataframe["close_time"])
+    @model_validator(mode="after")
+    def validate_datetime_columns(self):
+        """Convert `open_time` and `close_time` to `datetime` if needed."""
+        self.dataframe.loc[:, "open_time"] = pd.to_datetime(self.dataframe["open_time"])
+        self.dataframe.loc[:, "close_time"] = pd.to_datetime(self.dataframe["close_time"])
 
-        dataframe.sort_values(by="open_time", ascending=True).drop_duplicates(subset=["open_time"]).reset_index(
+        return self
+
+    @model_validator(mode="after")
+    def validate_rows_order(self):
+        """Sort dataframe rows by their `open_time`."""
+        self.dataframe.sort_values(by="open_time", ascending=True).drop_duplicates(subset=["open_time"]).reset_index(
             drop=True
         )
-
-        self.dataframe = dataframe
+        return self
 
     @classmethod
     def empty(cls) -> "Fluctuations":
         """Create an empty fluctuations."""
-        return cls(dataframe=pd.DataFrame(columns=["open_time", "close_time", "open", "high", "low", "close"]))
+        empty_dataframe = pd.DataFrame(columns=["open_time", "close_time", "open", "high", "low", "close"])
+        return cls(dataframe=empty_dataframe)
 
     @property
     def size(self) -> int:
