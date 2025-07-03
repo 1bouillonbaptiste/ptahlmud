@@ -58,4 +58,4 @@ def generate_fluctuations(
         "close": closes,
     }
     dataframe = pd.DataFrame(candles)
-    return Fluctuations(dataframe=dataframe)
+    return Fluctuations.from_pandas(dataframe=dataframe)

@@ -39,7 +39,7 @@ class BinanceClient(RemoteClient):
         )
 
         dataframe = _format_bars(historical_data, period=Period(timeframe=timeframe), end_date=end_date)
-        return Fluctuations(dataframe=dataframe)
+        return Fluctuations.from_pandas(dataframe=dataframe)
 
 
 def _format_bars(bars: list[tuple[float | int, ...]], period: Period, end_date: datetime) -> pd.DataFrame:

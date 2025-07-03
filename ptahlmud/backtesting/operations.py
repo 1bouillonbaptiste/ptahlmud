@@ -120,7 +120,7 @@ def _close_position(position: Position, fluctuations: Fluctuations) -> Trade:
             close_price, close_date = signal.to_price_date(position=position, candle=candle)
             return position.close(close_date=close_date, close_price=close_price)
 
-    last_candle = fluctuations_subset.dataframe.iloc[-1]
+    last_candle = fluctuations_subset.last_candle()
     return position.close(
         close_date=last_candle.close_time,
         close_price=Decimal(str(last_candle.close)),
