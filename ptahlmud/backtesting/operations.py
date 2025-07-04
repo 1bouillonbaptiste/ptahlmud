@@ -135,7 +135,7 @@ def calculate_trade(
     side: Side,
 ) -> Trade:
     """Calculate a trade."""
-    candle = fluctuations.get_candle_at(open_at)
+    candle = fluctuations.find_candle_containing(open_at)
     if open_at > candle.open_time:
         open_date = candle.close_time
         open_price = candle.close

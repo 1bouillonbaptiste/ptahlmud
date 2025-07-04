@@ -113,14 +113,12 @@ class Fluctuations:
     @property
     def earliest_open_time(self) -> datetime:
         """Return the earliest open time."""
-        first_candle = Candle.from_series(self._dataframe.iloc[0])
-        return first_candle.open_time
+        return self.get_candle_at(0).open_time
 
     @property
     def latest_close_time(self) -> datetime:
         """Return the latest close time."""
-        last_candle = Candle.from_series(self._dataframe.iloc[-1])
-        return last_candle.close_time
+        return self.get_candle_at(-1).close_time
 
     @property
     def period(self) -> Period:
@@ -146,16 +144,17 @@ class Fluctuations:
             ]
         )
 
-    def get_candle_at(self, date: datetime) -> Candle:
-        """Return the candle containing `date`."""
+    def get_candle_at(self, index: int) -> Candle:
+        """Return the i-th candle."""
+        row = self._dataframe.iloc[index]
+        return Candle.from_series(row)
+
+    def find_candle_containing(self, date: datetime) -> Candle:
+        """Return the only candle containing `date`."""
         if date > self.latest_close_time:
             raise ValueError("Date is after the latest close time.")
         row = self._dataframe[self._dataframe["open_time"] >= date].iloc[0]
         return Candle.from_series(row)
-
-    def last_candle(self) -> Candle:
-        """Return the last candle."""
-        return Candle.from_series(self._dataframe.iloc[-1])
 
     def iter_candles(self) -> Iterable[Candle]:
         """Iterate over the candles in the fluctuations."""
