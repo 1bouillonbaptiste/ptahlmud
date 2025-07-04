@@ -123,8 +123,8 @@ class Fluctuations:
     @property
     def period(self) -> Period:
         """The time duration of the fluctuations as a `Period` object, assume every candle shares the same period."""
-        first_candle = self._dataframe.iloc[0]
-        candle_total_minutes = int((first_candle["close_time"] - first_candle["open_time"]).total_seconds()) // 60
+        first_candle = self.get_candle_at(0)
+        candle_total_minutes = int((first_candle.close_time - first_candle.open_time).total_seconds()) // 60
         return Period(timeframe=str(candle_total_minutes) + "m")
 
     def get(self, name: str) -> pd.Series:
@@ -153,8 +153,8 @@ class Fluctuations:
         """Return the only candle containing `date`."""
         if date > self.latest_close_time:
             raise ValueError("Date is after the latest close time.")
-        row = self._dataframe[self._dataframe["open_time"] >= date].iloc[0]
-        return Candle.from_series(row)
+        candle_index = int(self.get("open_time").ge(date).idxmin())
+        return self.get_candle_at(candle_index)
 
     def iter_candles(self) -> Iterable[Candle]:
         """Iterate over the candles in the fluctuations."""
