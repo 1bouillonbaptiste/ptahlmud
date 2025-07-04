@@ -294,13 +294,14 @@ def _convert_fluctuations_to_period(
         .reset_index(drop=True)
     )
 
-    converted_fluctuations: Fluctuations = Fluctuations.from_pandas(dataframe=df_converted)
+    converted_fluctuations: Fluctuations = Fluctuations(dataframe=df_converted)
 
     # the last candle may be incomplete when the period is not a multiple of date range
-    last_candle = converted_fluctuations.last_candle()
+    last_candle = converted_fluctuations.get_candle_at(-1)
     if (last_candle.open_time + period.to_timedelta()) > last_candle.close_time:
-        df_converted = df_converted.iloc[:-1]
-    return Fluctuations.from_pandas(dataframe=df_converted)
+        return converted_fluctuations.subset(to_date=last_candle.open_time)
+
+    return converted_fluctuations
 
 
 def _merge_fluctuations(fluctuations_chunks: list[Fluctuations]) -> Fluctuations:
@@ -312,4 +313,4 @@ def _merge_fluctuations(fluctuations_chunks: list[Fluctuations]) -> Fluctuations
         .sort_values(by="open_time")
         .reset_index(drop=True)
     )
-    return Fluctuations.from_pandas(dataframe=merged_fluctuations)
+    return Fluctuations(dataframe=merged_fluctuations)

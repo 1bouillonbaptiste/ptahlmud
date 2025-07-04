@@ -147,7 +147,7 @@ def some_target(draw):
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
 def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
-    entry_candle = fluctuations.get_candle_at(fluctuations.earliest_open_time)
+    entry_candle = fluctuations.get_candle_at(0)
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
@@ -181,7 +181,7 @@ def test_calculate_trade_target_properties(fluctuations: Fluctuations, target: B
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
 def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
-    entry_candle = fluctuations.get_candle_at(fluctuations.earliest_open_time)
+    entry_candle = fluctuations.get_candle_at(0)
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
@@ -200,7 +200,7 @@ def test_calculate_trade_temporal_properties(fluctuations: Fluctuations, target:
     some.sampled_from([Side.LONG, Side.SHORT]),
 )
 def test_calculate_trade_return_properties(fluctuations: Fluctuations, target: BarrierLevels, side: Side):
-    entry_candle = fluctuations.get_candle_at(fluctuations.earliest_open_time)
+    entry_candle = fluctuations.get_candle_at(0)
     trade = calculate_trade(
         open_at=entry_candle.close_time,
         money_to_invest=Decimal(100),
