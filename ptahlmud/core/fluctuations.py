@@ -51,7 +51,7 @@ class Candle:
 
     @classmethod
     def from_series(cls, series: pd.Series) -> "Candle":
-        """Create a candle from a pandas Series."""
+        """Create a candle from a `pandas.Series`."""
         row_values = {column: series[column] for column in MANDATORY_COLUMNS} | {
             "high_time": series.get("high_time"),
             "low_time": series.get("low_time"),
