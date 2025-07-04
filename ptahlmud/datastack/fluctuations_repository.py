@@ -101,7 +101,7 @@ class FluctuationsRepository:
 def _read_fluctuations(filepath: Path) -> Fluctuations:
     """Read fluctuations from a CSV file."""
     dataframe = pd.read_csv(filepath, sep=";")
-    return Fluctuations(dataframe)
+    return Fluctuations.from_pandas(dataframe=dataframe)
 
 
 def _write_fluctuations(fluctuations: Fluctuations, filepath: Path) -> None:
@@ -112,4 +112,4 @@ def _write_fluctuations(fluctuations: Fluctuations, filepath: Path) -> None:
 def _merge_fluctuations(all_fluctuations: list[Fluctuations]) -> Fluctuations:
     """Merge multiple fluctuations into a single one."""
     merged_dataframes = pd.concat([fluctuations.dataframe for fluctuations in all_fluctuations]).reset_index(drop=True)
-    return Fluctuations(merged_dataframes)
+    return Fluctuations.from_pandas(dataframe=merged_dataframes)

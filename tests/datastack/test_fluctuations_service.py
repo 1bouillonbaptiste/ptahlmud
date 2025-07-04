@@ -132,8 +132,8 @@ def test_service_request_and_convert_fluctuations(mocked_service):
         2020, 1, 1, hour=6, minute=59
     )  # 7-minute candles are complete until 6:59
 
-    for _, candle in fluctuations.dataframe.iterrows():
-        assert (candle["close_time"] - candle["open_time"]) == timedelta(minutes=MINUTES_IN_TIMEFRAME)
+    for candle in fluctuations.iter_candles():
+        assert (candle.close_time - candle.open_time) == timedelta(minutes=MINUTES_IN_TIMEFRAME)
 
 
 def _trend_strength(df):
@@ -163,4 +163,4 @@ def test_service_request_custom_operation(mocked_service: FluctuationsService):
         ],
     )
 
-    assert "trend_strength" in fluctuations.dataframe.columns
+    assert "trend_strength" in fluctuations.columns

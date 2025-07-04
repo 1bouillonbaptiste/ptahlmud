@@ -141,9 +141,9 @@ def process_signals(
         if match.entry.date >= fluctuations.earliest_open_time:
             continue
 
-        fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=match.exit_date).first_candles(
-            risk_config.max_depth
-        )
+        to_date_max = match.entry.date + fluctuations.period.to_timedelta() * risk_config.max_depth
+        to_date = min(match.exit_date or to_date_max, to_date_max)
+        fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=to_date)
         new_trade = calculate_trade(
             open_at=match.entry.date,
             money_to_invest=available_capital * trade_size,
