@@ -17,6 +17,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
+from tqdm import tqdm
 
 from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.operations import BarrierLevels, calculate_trade
@@ -118,6 +119,7 @@ def process_signals(
     signals: list[Signal],
     risk_config: RiskConfig,
     fluctuations: Fluctuations,
+    verbose: bool = True,
 ) -> list[Trade]:
     """Process trading signals to generate trades and track portfolio changes.
 
@@ -125,6 +127,7 @@ def process_signals(
         signals: trading signals
         risk_config: risk management parameters
         fluctuations: market fluctuations
+        verbose: display the trading calculation progress ot not
 
     Returns:
         executed trades as a list
@@ -133,12 +136,12 @@ def process_signals(
     portfolio = Portfolio(starting_date=fluctuations.earliest_open_time)
     trades: list[Trade] = []
     trade_size = Decimal(str(risk_config.size))
-    for match in _match_signals(signals):
+    for match in tqdm(_match_signals(signals), desc="Processing signals:", disable=not verbose):
         available_capital = portfolio.get_available_capital_at(match.entry.date)
         if available_capital == 0:
             continue
 
-        if match.entry.date >= fluctuations.earliest_open_time:
+        if match.entry.date < fluctuations.earliest_open_time:
             continue
 
         to_date_max = match.entry.date + fluctuations.period.to_timedelta() * risk_config.max_depth
