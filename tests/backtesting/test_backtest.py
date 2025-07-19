@@ -6,7 +6,7 @@ from hypothesis import strategies as some
 from hypothesis.strategies import composite
 from pytest_cases import parametrize_with_cases
 
-from ptahlmud.backtesting.backtest import MatchedSignal, RiskConfig, _match_signals, process_signals
+from ptahlmud.backtesting.backtest import MatchedSignal, TradingParameters, _match_signals, process_signals
 from ptahlmud.backtesting.models.signal import Action, Side, Signal
 from ptahlmud.backtesting.portfolio import Portfolio
 from ptahlmud.core import Period
@@ -94,9 +94,9 @@ def some_signals(draw) -> list[Signal]:
 
 
 @composite
-def some_risk_config(draw) -> RiskConfig:
+def some_risk_config(draw) -> TradingParameters:
     """Generate a random risk config."""
-    return RiskConfig(
+    return TradingParameters(
         size=draw(some.floats(min_value=0.01, max_value=1.0)),
         take_profit=draw(some.floats(min_value=0.001, max_value=100.0)),
         stop_loss=draw(some.floats(min_value=0.001, max_value=0.999)),
@@ -108,7 +108,7 @@ def some_risk_config(draw) -> RiskConfig:
     some_signals(),
     some_risk_config(),
 )
-def test_process_signals_trades_property(signals: list[Signal], risk_config: RiskConfig):
+def test_process_signals_trades_property(signals: list[Signal], risk_config: TradingParameters):
     """Check that trades are correctly generated from signals."""
     period = Period(timeframe="1m")
     fluctuations = generate_fluctuations(
@@ -116,7 +116,7 @@ def test_process_signals_trades_property(signals: list[Signal], risk_config: Ris
     )
     trades = process_signals(
         signals=signals,
-        risk_config=risk_config,
+        parameters=risk_config,
         fluctuations=fluctuations,
     )
 
@@ -133,12 +133,12 @@ def test_process_signals_trades_property(signals: list[Signal], risk_config: Ris
     some_signals(),
     some_risk_config(),
 )
-def test_process_signals_portfolio_validity(signals: list[Signal], risk_config: RiskConfig):
+def test_process_signals_portfolio_validity(signals: list[Signal], risk_config: TradingParameters):
     """Check that the portfolio state remains valid throughout the backtest."""
     fluctuations = generate_fluctuations(
         from_date=datetime(2020, 1, 1), to_date=datetime(2020, 1, 1, hour=6), period=Period(timeframe="1m")
     )
-    trades = process_signals(signals=signals, risk_config=risk_config, fluctuations=fluctuations)
+    trades = process_signals(signals=signals, parameters=risk_config, fluctuations=fluctuations)
 
     if trades:
         portfolio = Portfolio(starting_date=trades[0].open_date)

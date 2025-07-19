@@ -133,6 +133,7 @@ def calculate_trade(
     fluctuations: Fluctuations,
     target: BarrierLevels,
     side: Side,
+    fees_pct: float = 0.001,
 ) -> Trade:
     """Calculate a trade."""
     candle = fluctuations.find_candle_containing(open_at)
@@ -146,7 +147,7 @@ def calculate_trade(
         open_date=open_date,
         open_price=Decimal(str(open_price)),
         money_to_invest=money_to_invest,
-        fees_pct=Decimal(str(0.001)),
+        fees_pct=Decimal(str(fees_pct)),
         side=side,
         higher_barrier=Decimal(str(target.high_value(open_price))),
         lower_barrier=Decimal(str(target.low_value(open_price))),

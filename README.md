@@ -29,7 +29,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ptahlmud.backtesting.models import Signal, Side, Action
-from ptahlmud.backtesting.backtest import RiskConfig, process_signals
+from ptahlmud.backtesting.backtest import TradingParameters, process_signals
 from ptahlmud.datastack import FluctuationsService, BinanceClient, FluctuationsSpecs
 
 client = BinanceClient(binance_secret="", binance_key="")
@@ -54,7 +54,7 @@ signals = [
 ]
 
 # Configure risk management
-risk_config = RiskConfig(
+risk_config = TradingParameters(
     size=0.1,  # Use 10% of available capital per trade
     take_profit=0.05,  # Take profit at 5% price increase
     stop_loss=0.03,  # Cut losses at 3% price decrease
@@ -63,7 +63,7 @@ risk_config = RiskConfig(
 # Run the backtest
 trades = process_signals(
     signals=signals,
-    risk_config=risk_config,
+    parameters=risk_config,
     fluctuations=fluctuations,
 )
 
