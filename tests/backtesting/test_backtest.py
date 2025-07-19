@@ -143,7 +143,7 @@ def test_process_signals_portfolio_validity(signals: list[Signal], risk_config: 
     if trades:
         portfolio = Portfolio(starting_date=trades[0].open_date)
         for trade in trades:
-            portfolio.update_from_trade(trade)
+            portfolio.add_trade(trade)
 
         # every trade gets closed during the trading session, so the asset volume is the initial value
         assert portfolio.get_asset_volume_at(trades[-1].close_date) == Portfolio.default_asset_amount()

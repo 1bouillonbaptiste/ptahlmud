@@ -153,5 +153,5 @@ def process_signals(
             target=_create_target(match=match, risk_config=risk_config),
             side=match.entry.side,
         )
-        portfolio.update_from_trade(new_trade)
+        portfolio.add_trade(new_trade)
     return portfolio.trades

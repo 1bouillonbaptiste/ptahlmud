@@ -166,7 +166,7 @@ class Portfolio:
 
         self.wealth_series.update_wealth(date=date, currency_difference=currency_amount, asset_difference=-asset_volume)
 
-    def update_from_trade(self, trade: Trade) -> None:
+    def add_trade(self, trade: Trade) -> None:
         """Update the portfolio after a trade is completed."""
         self._perform_entry(trade.open_date, currency_amount=trade.initial_investment, asset_volume=trade.volume)
         self._perform_exit(

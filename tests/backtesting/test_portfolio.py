@@ -122,8 +122,8 @@ def test__perform_exit_fails_on_volume():
         portfolio._perform_exit(datetime(2020, 1, 2), asset_volume=Decimal(2), currency_amount=Decimal(20))
 
 
-class PortfolioUpdateFromTradeCases:
-    """Generate test cases for `Portfolio.update_from_trade()`.
+class PortfolioAddTradeCases:
+    """Generate test cases for `Portfolio.add_trade()`.
 
     The portfolio is initialized with currency at 200 and volume at 0.
 
@@ -180,10 +180,10 @@ class PortfolioUpdateFromTradeCases:
         ]
 
 
-@parametrize_with_cases("trade, expected_wealth_at_dates", cases=PortfolioUpdateFromTradeCases)
-def test_portfolio_update_from_trade(trade: Trade, expected_wealth_at_dates: list[WealthItem]):
+@parametrize_with_cases("trade, expected_wealth_at_dates", cases=PortfolioAddTradeCases)
+def test_portfolio_add_new_trade(trade: Trade, expected_wealth_at_dates: list[WealthItem]):
     portfolio = Portfolio(starting_date=datetime(2020, 1, 1))
-    portfolio.update_from_trade(trade)
+    portfolio.add_trade(trade)
     for wealth_item in expected_wealth_at_dates:
         assert portfolio.get_available_capital_at(wealth_item.date) == wealth_item.currency
         assert portfolio.get_asset_volume_at(wealth_item.date) == wealth_item.asset
