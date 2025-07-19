@@ -134,7 +134,6 @@ def process_signals(
         the portfolio after trading session
     """
     portfolio = Portfolio(starting_date=fluctuations.earliest_open_time)
-    trades: list[Trade] = []
     trade_size = Decimal(str(risk_config.size))
     for match in tqdm(_match_signals(signals), desc="Processing signals:", disable=not verbose):
         available_capital = portfolio.get_available_capital_at(match.entry.date)
@@ -154,6 +153,5 @@ def process_signals(
             target=_create_target(match=match, risk_config=risk_config),
             side=match.entry.side,
         )
-        trades.append(new_trade)
         portfolio.update_from_trade(new_trade)
-    return trades
+    return portfolio.trades

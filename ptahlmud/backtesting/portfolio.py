@@ -130,11 +130,13 @@ class Portfolio:
     """
 
     wealth_series: WealthSeries
+    trades: list[Trade]
 
     def __init__(self, starting_date: datetime):
         self.wealth_series = WealthSeries.start_with(
             date=starting_date, currency=self.default_currency_amount(), asset=self.default_asset_amount()
         )
+        self.trades = []
 
     @staticmethod
     def default_currency_amount() -> Decimal:
@@ -170,6 +172,7 @@ class Portfolio:
         self._perform_exit(
             trade.close_date, asset_volume=trade.volume, currency_amount=trade.total_profit + trade.initial_investment
         )
+        self.trades.append(trade)
 
     def get_available_capital_at(self, date: datetime) -> Decimal:
         """Return the available currency at a specific date."""
