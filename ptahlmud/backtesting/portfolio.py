@@ -130,11 +130,13 @@ class Portfolio:
     """
 
     wealth_series: WealthSeries
+    trades: list[Trade]
 
     def __init__(self, starting_date: datetime):
         self.wealth_series = WealthSeries.start_with(
             date=starting_date, currency=self.default_currency_amount(), asset=self.default_asset_amount()
         )
+        self.trades = []
 
     @staticmethod
     def default_currency_amount() -> Decimal:
@@ -164,12 +166,13 @@ class Portfolio:
 
         self.wealth_series.update_wealth(date=date, currency_difference=currency_amount, asset_difference=-asset_volume)
 
-    def update_from_trade(self, trade: Trade) -> None:
+    def add_trade(self, trade: Trade) -> None:
         """Update the portfolio after a trade is completed."""
         self._perform_entry(trade.open_date, currency_amount=trade.initial_investment, asset_volume=trade.volume)
         self._perform_exit(
             trade.close_date, asset_volume=trade.volume, currency_amount=trade.total_profit + trade.initial_investment
         )
+        self.trades.append(trade)
 
     def get_available_capital_at(self, date: datetime) -> Decimal:
         """Return the available currency at a specific date."""
