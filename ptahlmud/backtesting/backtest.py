@@ -26,8 +26,8 @@ from ptahlmud.backtesting.positions import Trade
 from ptahlmud.core import Fluctuations
 
 
-class RiskConfig(BaseModel):
-    """Define risk management parameters for trading.
+class TradingParameters(BaseModel):
+    """Trading parameters.
 
     Risk management is crucial for protecting trading capital. This configuration
     determines how much capital to risk per trade and how long to hold the position.
@@ -37,12 +37,14 @@ class RiskConfig(BaseModel):
         take_profit: the price increase percentage that triggers profit-taking
         stop_loss: the price decrease percentage that triggers loss-cutting
         max_depth: the maximum number of candles to leave a trade opened
+        fees_pct: transaction cost in percentage
     """
 
     size: float
     take_profit: float
     stop_loss: float
     max_depth: int
+    fees_pct: float = 0.001
 
 
 @dataclass
@@ -100,24 +102,24 @@ def _match_signals(signals: list[Signal]) -> list[MatchedSignal]:
     return matches
 
 
-def _create_target(match: MatchedSignal, risk_config: RiskConfig) -> BarrierLevels:
+def _create_target(match: MatchedSignal, trading_parameters: TradingParameters) -> BarrierLevels:
     """Create price barriers for a trade based on risk settings and trade direction."""
 
     if match.entry.side == Side.LONG:
         return BarrierLevels(
-            high=risk_config.take_profit,
-            low=risk_config.stop_loss,
+            high=trading_parameters.take_profit,
+            low=trading_parameters.stop_loss,
         )
     else:
         return BarrierLevels(
-            high=risk_config.stop_loss,
-            low=min(risk_config.take_profit, 0.999),  # the maximum profit is 100% if the price goes at 0
+            high=trading_parameters.stop_loss,
+            low=min(trading_parameters.take_profit, 0.999),  # the maximum profit is 100% if the price goes at 0
         )
 
 
 def process_signals(
     signals: list[Signal],
-    risk_config: RiskConfig,
+    parameters: TradingParameters,
     fluctuations: Fluctuations,
     verbose: bool = True,
 ) -> list[Trade]:
@@ -125,7 +127,7 @@ def process_signals(
 
     Args:
         signals: trading signals
-        risk_config: risk management parameters
+        parameters: risk management parameters
         fluctuations: market fluctuations
         verbose: display the trading calculation progress ot not
 
@@ -134,7 +136,7 @@ def process_signals(
         the portfolio after trading session
     """
     portfolio = Portfolio(starting_date=fluctuations.earliest_open_time)
-    trade_size = Decimal(str(risk_config.size))
+    trade_size = Decimal(str(parameters.size))
     for match in tqdm(_match_signals(signals), desc="Processing signals:", disable=not verbose):
         available_capital = portfolio.get_available_capital_at(match.entry.date)
         if available_capital == 0:
@@ -143,15 +145,16 @@ def process_signals(
         if match.entry.date < fluctuations.earliest_open_time:
             continue
 
-        to_date_max = match.entry.date + fluctuations.period.to_timedelta() * risk_config.max_depth
+        to_date_max = match.entry.date + fluctuations.period.to_timedelta() * parameters.max_depth
         to_date = min(match.exit_date or to_date_max, to_date_max)
         fluctuations_subset = fluctuations.subset(from_date=match.entry.date, to_date=to_date)
         new_trade = calculate_trade(
             open_at=match.entry.date,
             money_to_invest=available_capital * trade_size,
             fluctuations=fluctuations_subset,
-            target=_create_target(match=match, risk_config=risk_config),
+            target=_create_target(match=match, trading_parameters=parameters),
             side=match.entry.side,
+            fees_pct=parameters.fees_pct,
         )
         portfolio.add_trade(new_trade)
     return portfolio.trades
